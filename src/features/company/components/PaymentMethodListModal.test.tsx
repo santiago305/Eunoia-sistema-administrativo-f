@@ -80,17 +80,33 @@ vi.mock(
       options,
       onCreate,
       onEdit,
+      onChange,
     }: {
       label: string;
-      options: Array<{ label: string }>;
+      options: Array<{ value: string; label: string }>;
       onCreate?: () => void;
       onEdit?: (methodId: string) => void;
+      onChange: (methodId: string) => void;
     }) => (
       <div>
         <span>{label}</span>
         <div data-testid="available-methods">
           {options.map((option) => option.label).join(",")}
         </div>
+        {options[0] ? (
+          <button
+            type="button"
+            aria-label="Seleccionar método disponible"
+            onClick={() =>
+              onChange(
+                options.find((option) => option.value === "method-card")?.value ??
+                  options[0].value,
+              )
+            }
+          >
+            Seleccionar
+          </button>
+        ) : null}
         {onCreate ? (
           <button type="button" aria-label="Nuevo método" onClick={onCreate}>
             Nuevo
@@ -249,6 +265,32 @@ describe("PaymentMethodListModal", () => {
     expect(table).not.toHaveTextContent("Estado");
   });
 
+  it("guarda una sola política de comprobante para la empresa", async () => {
+    getPaymentMethodsByCompanyMock.mockResolvedValue([]);
+
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Seleccionar método disponible" }));
+    fireEvent.click(screen.getByRole("button", { name: /política de comprobante/i }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "Obligatorio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
+
+    await waitFor(() => {
+      expect(createCompanyMethodMock).toHaveBeenCalledWith({
+        companyId: "company-1",
+        methodId: "method-card",
+        evidencePolicy: "REQUIRED",
+        enabled: true,
+      });
+    });
+  });
+
   it("organiza los controles en un formulario accesible y responsivo", async () => {
     canMock.mockImplementation(
       (permission: string) => permission === "payment-methods.read",
@@ -270,7 +312,9 @@ describe("PaymentMethodListModal", () => {
       "lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.65fr)_auto]",
     );
     expect(screen.getAllByText("Método de pago")).toHaveLength(2);
-    expect(screen.getByLabelText("Comprobante obligatorio")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /política de comprobante/i }),
+    ).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "Nuevo método" }),
     ).not.toBeInTheDocument();

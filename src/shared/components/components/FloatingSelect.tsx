@@ -568,6 +568,7 @@ export function FloatingSelect({
 
         <label
           id={labelId}
+          htmlFor={name}
           className={[
             "pointer-events-none absolute left-3 bg-background px-1 transition-all duration-200",
             hasValue || open

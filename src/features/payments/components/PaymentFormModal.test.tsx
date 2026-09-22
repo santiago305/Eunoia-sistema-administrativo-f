@@ -6,14 +6,14 @@ const {
   createPaymentMock,
   createPaymentDraftMock,
   submitPaymentDraftMock,
-  getAllPaymentMethodsMock,
+  getPaymentMethodsByCompanyMock,
   listAccountPayablesMock,
   uploadPurchaseAttachmentMock,
 } = vi.hoisted(() => ({
   createPaymentMock: vi.fn(),
   createPaymentDraftMock: vi.fn(),
   submitPaymentDraftMock: vi.fn(),
-  getAllPaymentMethodsMock: vi.fn(),
+  getPaymentMethodsByCompanyMock: vi.fn(),
   listAccountPayablesMock: vi.fn(),
   uploadPurchaseAttachmentMock: vi.fn(),
 }));
@@ -25,7 +25,7 @@ vi.mock("@/shared/services/paymentService", () => ({
 }));
 
 vi.mock("@/shared/services/paymentMethodService", () => ({
-  getAllPaymentMethods: getAllPaymentMethodsMock,
+  getPaymentMethodsByCompany: getPaymentMethodsByCompanyMock,
 }));
 
 vi.mock("@/shared/services/accountsPayableService", () => ({
@@ -64,7 +64,7 @@ vi.mock("./CompanyPaymentAccountSelect", () => ({
 describe("PaymentFormModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getAllPaymentMethodsMock.mockResolvedValue([
+    getPaymentMethodsByCompanyMock.mockResolvedValue([
       { methodId: "method-1", name: "TRANSFERENCIA", isActive: true, requiresVoucher: false },
     ]);
     listAccountPayablesMock.mockResolvedValue({
@@ -102,6 +102,7 @@ describe("PaymentFormModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /guardar pago/i }));
 
     await waitFor(() => {
+      expect(getPaymentMethodsByCompanyMock).toHaveBeenCalledWith("company-1");
       expect(createPaymentDraftMock).toHaveBeenCalledWith(
         expect.objectContaining({
           poId: "purchase-1",
@@ -117,6 +118,24 @@ describe("PaymentFormModal", () => {
       );
     });
     expect(onSaved).toHaveBeenCalled();
+  });
+
+  it("does not offer global fallback methods when the company has none configured", async () => {
+    getPaymentMethodsByCompanyMock.mockResolvedValueOnce([]);
+
+    render(
+      <PaymentFormModal
+        open
+        mode="create"
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        initialPayment={{ poId: "purchase-1", currency: "PEN", amount: 120 }}
+      />,
+    );
+
+    expect(await screen.findByText(/no tiene métodos de pago habilitados/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /guardar pago/i })).toBeDisabled();
+    expect(createPaymentDraftMock).not.toHaveBeenCalled();
   });
 
   it("prefills payment fields from a selected account payable", async () => {
@@ -186,7 +205,9 @@ describe("PaymentFormModal", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /programar pago/i }));
+    const scheduleButton = screen.getByRole("button", { name: /programar pago/i });
+    await waitFor(() => expect(scheduleButton).toBeEnabled());
+    fireEvent.click(scheduleButton);
 
     expect(createPaymentMock).not.toHaveBeenCalled();
     expect(screen.getByText(/fecha futura/i)).toBeInTheDocument();

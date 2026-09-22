@@ -12,6 +12,7 @@ import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { PaymentMethodFormModal } from "@/features/payment-methods/components/PaymentMethodFormModal";
 import { PaymentMethodSelectComposed } from "@/features/payment-methods/components/PaymentMethodSelectComposed";
 import type {
+  CompanyMethodEvidencePolicy,
   PaymentMethod,
   PaymentMethodPivot,
 } from "@/features/payment-methods/types/paymentMethod";
@@ -26,8 +27,8 @@ import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { AlertModal } from "@/shared/components/components/AlertModal";
-import { Checkbox } from "@/shared/components/ui/checkbox";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 
 type PaymentMethodListModalProps = {
   title: string;
@@ -37,11 +38,6 @@ type PaymentMethodListModalProps = {
 };
 
 const PRIMARY = "hsl(var(--primary))";
-
-const defaultRequiresVoucher = (method: PaymentMethod | undefined) => {
-  const value = (method?.code ?? method?.name ?? "").trim().toUpperCase();
-  return value !== "CASH" && value !== "EFECTIVO";
-};
 
 export function PaymentMethodListModal({
   title,
@@ -58,7 +54,7 @@ export function PaymentMethodListModal({
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState("");
-  const [requiresVoucher, setRequiresVoucher] = useState(true);
+  const [evidencePolicy, setEvidencePolicy] = useState<CompanyMethodEvidencePolicy>("INHERIT");
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
   const [pendingRemoveMethod, setPendingRemoveMethod] =
@@ -132,12 +128,8 @@ export function PaymentMethodListModal({
       setSelectedId("");
     }
 
-    setRequiresVoucher(
-      defaultRequiresVoucher(
-        allMethods.find((method) => method.methodId === selectedId),
-      ),
-    );
-  }, [allMethods, availableOptions, selectedId]);
+    setEvidencePolicy("INHERIT");
+  }, [availableOptions, selectedId]);
 
   const addMethod = useCallback(async () => {
     if (!companyId || !selectedId || adding || !canManagePaymentMethods) return;
@@ -148,12 +140,12 @@ export function PaymentMethodListModal({
       await createCompanyMethod({
         companyId,
         methodId: selectedId,
-        requiresVoucher,
+        evidencePolicy,
         enabled: true,
       });
       showFeedback(successResponse("Método agregado."));
       setSelectedId("");
-      setRequiresVoucher(true);
+      setEvidencePolicy("INHERIT");
       await loadCompanyMethods({ silent: true });
     } catch {
       showFeedback(errorResponse("No se pudo agregar el método."));
@@ -166,7 +158,7 @@ export function PaymentMethodListModal({
     clearFeedback,
     companyId,
     loadCompanyMethods,
-    requiresVoucher,
+    evidencePolicy,
     selectedId,
     showFeedback,
   ]);
@@ -218,7 +210,12 @@ export function PaymentMethodListModal({
         header: "Comprobante",
         sortAccessor: "requiresVoucher",
         cell: (row) =>
-          row.requiresVoucher ? (
+          row.evidencePolicy === "INHERIT" ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
+              <ReceiptText className="h-3.5 w-3.5" aria-hidden="true" />
+              Regla general: {row.requiresVoucher ? "obligatorio" : "opcional"}
+            </span>
+          ) : row.requiresVoucher ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
               <ReceiptText className="h-3.5 w-3.5" aria-hidden="true" />
               Obligatorio
@@ -291,21 +288,19 @@ export function PaymentMethodListModal({
               emptyLabel="No hay métodos disponibles"
             />
 
-            <label
-              htmlFor="company-method-requires-voucher"
-              className="flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/30 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
-            >
-              <Checkbox
-                id="company-method-requires-voucher"
-                checked={requiresVoucher}
-                onCheckedChange={(checked) =>
-                  setRequiresVoucher(checked === true)
-                }
-                disabled={adding || !canManagePaymentMethods}
-                aria-label="Comprobante obligatorio"
-              />
-              <span className="leading-5">Comprobante obligatorio</span>
-            </label>
+            <FloatingSelect
+              label="Política de comprobante"
+              name="company-method-evidence-policy"
+              value={evidencePolicy}
+              onChange={(value) => setEvidencePolicy(value as CompanyMethodEvidencePolicy)}
+              options={[
+                { value: "INHERIT", label: "Usar regla general" },
+                { value: "REQUIRED", label: "Obligatorio" },
+                { value: "OPTIONAL", label: "Opcional" },
+              ]}
+              disabled={adding || !canManagePaymentMethods}
+              searchable={false}
+            />
 
             <SystemButton
               type="submit"

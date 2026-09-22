@@ -8,6 +8,8 @@ import {
 } from "@/shared/schemas/paymentMethodSchemas";
 import type { PaymentMethodCode } from "../paymentMethodCatalog";
 
+export type CompanyMethodEvidencePolicy = "INHERIT" | "REQUIRED" | "OPTIONAL";
+
 export type CreatePaymentMethodDto = z.infer<typeof createPaymentMethodSchema>;
 export type UpdatePaymentMethodDto = z.infer<typeof updatePaymentMethodSchema>;
 export type SetPaymentMethodActiveDto = z.infer<typeof setPaymentMethodActiveSchema>;
@@ -41,6 +43,7 @@ export type PaymentMethodPivot = {
   isActive: boolean;
   isDefault?: boolean;
   requiresVoucher?: boolean;
+  evidencePolicy?: CompanyMethodEvidencePolicy;
   enabled?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -64,5 +67,6 @@ export type CompanyMethod = {
   companyId: string;
   methodId: string;
   requiresVoucher?: boolean;
+  evidencePolicy?: CompanyMethodEvidencePolicy;
 };
 

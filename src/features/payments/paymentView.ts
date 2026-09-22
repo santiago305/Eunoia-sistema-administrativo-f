@@ -45,7 +45,10 @@ export const canShowPaymentDeleteAction = (canManagePayments: boolean, status?: 
 export const hasPaymentEvidence = (payment: Pick<Payment, "paymentEvidenceFileId" | "paymentEvidenceCount" | "hasEvidence">) =>
   Boolean(payment.hasEvidence || payment.paymentEvidenceFileId || Number(payment.paymentEvidenceCount ?? 0) > 0);
 
-export const getPaymentMethodOptions = (records?: PaymentMethod[] | null) => {
+export const getPaymentMethodOptions = (
+  records?: PaymentMethod[] | null,
+  options?: { fallbackToDefaults?: boolean },
+) => {
   const activeRecords = (records ?? []).filter((method) => method.isActive);
 
   if (activeRecords.length > 0) {
@@ -55,6 +58,8 @@ export const getPaymentMethodOptions = (records?: PaymentMethod[] | null) => {
       requiresVoucher: method.requiresVoucher,
     }));
   }
+
+  if (options?.fallbackToDefaults === false) return [];
 
   return Object.values(PaymentTypes).map((method) => ({
     value: method,

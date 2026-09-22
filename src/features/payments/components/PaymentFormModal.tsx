@@ -9,7 +9,7 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Modal } from "@/shared/components/modales/Modal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { createPaymentDraft, submitPaymentDraft } from "@/shared/services/paymentService";
-import { getAllPaymentMethods } from "@/shared/services/paymentMethodService";
+import { getPaymentMethodsByCompany } from "@/shared/services/paymentMethodService";
 import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentService";
 import {
   listSupplierPaymentDestinations,
@@ -21,7 +21,7 @@ import { useCompany } from "@/shared/hooks/useCompany";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { getPaymentMethodOptions } from "@/features/payments/paymentView";
-import { PaymentTypes, type CurrencyType } from "@/features/purchases/types/purchaseEnums";
+import type { CurrencyType } from "@/features/purchases/types/purchaseEnums";
 import type { PaymentMethod } from "@/features/payment-methods/types/paymentMethod";
 import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-attachment.types";
 import { normalizeMoney, parseDateInputValue, parseDecimalInput, toLocalDateKey } from "@/shared/utils/functionPurchases";
@@ -52,7 +52,7 @@ type Props = {
   initialPayment?: PaymentFormInitialPayment | null;
 };
 
-type FormErrors = Partial<Record<"poId" | "amount" | "scheduledAt" | "evidence" | "account" | "destination" | "operationNumber", string>>;
+type FormErrors = Partial<Record<"poId" | "amount" | "scheduledAt" | "evidence" | "method" | "account" | "destination" | "operationNumber", string>>;
 
 const todayKey = () => toLocalDateKey(new Date());
 const tomorrowKey = () => {
@@ -75,6 +75,7 @@ export function PaymentFormModal({
   initialPayment,
 }: Props) {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[] | null>(null);
+  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<CompanyPaymentAccount | null>(null);
   const [poId, setPoId] = useState("");
   const [quotaId, setQuotaId] = useState("");
@@ -100,7 +101,10 @@ export function PaymentFormModal({
   const { showFeedback } = useFeedbackToast();
   const canAttachEvidence = can("payments.attach_evidence");
 
-  const methodOptions = useMemo(() => getPaymentMethodOptions(paymentMethods), [paymentMethods]);
+  const methodOptions = useMemo(
+    () => getPaymentMethodOptions(paymentMethods, { fallbackToDefaults: false }),
+    [paymentMethods],
+  );
   const selectedMethod = useMemo(
     () => paymentMethods?.find((item) => item.name === method) ?? null,
     [method, paymentMethods],
@@ -110,8 +114,8 @@ export function PaymentFormModal({
     [selectedMethod],
   );
   const showAccountSelect = selectedMethod?.requiresSourceAccount ?? true;
-  const selectedMethodRequiresVoucher = showAccountSelect && (selectedMethod?.requiresVoucher ?? false);
-  const showEvidenceUploader = showAccountSelect && (canAttachEvidence || selectedMethodRequiresVoucher);
+  const selectedMethodRequiresVoucher = selectedMethod?.requiresVoucher ?? false;
+  const showEvidenceUploader = canAttachEvidence || selectedMethodRequiresVoucher;
   const title = mode === "schedule" ? "Programar pago" : "Registrar pago";
   const submitLabel = mode === "schedule" ? "Programar pago" : "Guardar pago";
 
@@ -129,6 +133,7 @@ export function PaymentFormModal({
     setScheduledAt(mode === "schedule" ? initialPayment?.scheduledAt ?? tomorrowKey() : initialPayment?.scheduledAt ?? "");
     setOperationNumber("");
     setNote("");
+    setMethod("");
     setSelectedAccount(null);
     setEvidenceFile(null);
     setErrors({});
@@ -174,26 +179,33 @@ export function PaymentFormModal({
   }, [currency, open, selectedMethod?.requiresDestination, selectedPaymentMethodId, supplierId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !company?.companyId) return;
 
     let alive = true;
-    getAllPaymentMethods()
+    setPaymentMethods(null);
+    setPaymentMethodsError(null);
+    getPaymentMethodsByCompany(company.companyId)
       .then((records) => {
         if (!alive) return;
-        setPaymentMethods(records);
-        const active = records.find((item) => item.isActive);
-        setMethod((current) => current || active?.name || PaymentTypes.EFECTIVO);
+        const available = records.filter((item) => item.isActive && item.enabled !== false);
+        setPaymentMethods(available);
+        setMethod((current) =>
+          available.some((item) => item.name === current)
+            ? current
+            : available[0]?.name ?? "",
+        );
       })
       .catch(() => {
         if (!alive) return;
-        setPaymentMethods(null);
-        setMethod((current) => current || PaymentTypes.EFECTIVO);
+        setPaymentMethods([]);
+        setMethod("");
+        setPaymentMethodsError("No se pudieron cargar los métodos habilitados de la empresa.");
       });
 
     return () => {
       alive = false;
     };
-  }, [open]);
+  }, [company?.companyId, open]);
 
   useEffect(() => {
     if (!showAccountSelect) {
@@ -223,6 +235,11 @@ export function PaymentFormModal({
     const amountNumber = normalizeMoney(parseDecimalInput(amount));
     if (!poId.trim()) nextErrors.poId = "Selecciona una cuenta por pagar.";
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) nextErrors.amount = "Ingresa un monto valido.";
+    if (!selectedMethod) {
+      nextErrors.method = paymentMethods?.length === 0
+        ? "La empresa no tiene métodos de pago habilitados."
+        : "Selecciona un método de pago.";
+    }
     if (selectedPayable && amountNumber > Number(selectedPayable.amountPending) + 0.01) {
       nextErrors.amount = "El monto supera el saldo pendiente.";
     }
@@ -340,6 +357,7 @@ export function PaymentFormModal({
           <SystemButton
             leftIcon={mode === "schedule" ? <CalendarClock className="h-4 w-4" /> : <Banknote className="h-4 w-4" />}
             onClick={() => void handleSave()}
+            disabled={paymentMethods === null || paymentMethods.length === 0}
             loading={saving}
           >
             {submitLabel}
@@ -450,10 +468,22 @@ export function PaymentFormModal({
           label="Metodo"
           name="payment-method"
           value={method}
-          onChange={setMethod}
+          onChange={(nextMethod) => {
+            setMethod(nextMethod);
+            setSelectedAccount(null);
+            setSupplierPaymentDestinationId("");
+          }}
           options={methodOptions}
+          placeholder={paymentMethods === null ? "Cargando métodos..." : "Selecciona un método"}
+          disabled={saving || paymentMethods === null || paymentMethods.length === 0}
+          error={errors.method}
           searchable={false}
         />
+        {paymentMethods !== null && paymentMethods.length === 0 ? (
+          <div className="sm:col-span-2 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+            {paymentMethodsError ?? "La empresa no tiene métodos de pago habilitados. Configúralos desde Empresa antes de registrar un pago."}
+          </div>
+        ) : null}
         <FloatingInput
           label="Numero de operacion"
           name="payment-operation-number"
