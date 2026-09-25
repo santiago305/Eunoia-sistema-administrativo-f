@@ -64,19 +64,20 @@ describe("saleOrderExportCache", () => {
     expect(getSaleOrderExportColumnsMock).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores old export column storage so new backend columns are loaded", async () => {
+  it("ignores old export column storage so the client reference column is loaded", async () => {
     const oldColumns: SaleOrderExportColumn[] = [{ key: "number", label: "Numero" }];
     const updatedColumns: SaleOrderExportColumn[] = [
       ...oldColumns,
-      { key: "SKUS", label: "SKUS" },
-      { key: "detail", label: "Detalle" },
+      { key: "clientReference", label: "Referencia" },
     ];
-    sessionStorage.setItem("sale-orders:export-columns:v1", JSON.stringify(oldColumns));
+    sessionStorage.setItem("sale-orders:export-columns:v3", JSON.stringify(oldColumns));
     getSaleOrderExportColumnsMock.mockResolvedValue(updatedColumns);
 
     await expect(loadSaleOrderExportColumnsCached()).resolves.toEqual(updatedColumns);
 
     expect(getSaleOrderExportColumnsMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(sessionStorage.getItem("sale-orders:export-columns:v4") ?? "[]"))
+      .toContainEqual({ key: "clientReference", label: "Referencia" });
   });
 
   it("caches export presets by user", async () => {
