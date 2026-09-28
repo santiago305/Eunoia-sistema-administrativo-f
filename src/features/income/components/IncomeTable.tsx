@@ -11,60 +11,117 @@ type Props = {
 const money = (value: number) =>
   new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(value || 0);
 
-const date = (value: string) => {
+const parseDate = (value: string) => {
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString("es-PE");
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const paymentDate = (value: string) => {
+  const parsed = parseDate(value);
+  if (!parsed) return value;
+  return new Intl.DateTimeFormat("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(parsed);
+};
+
+const paymentMonth = (value: string) => {
+  const parsed = parseDate(value);
+  if (!parsed) return "-";
+  return new Intl.DateTimeFormat("es-PE", {
+    month: "short",
+    timeZone: "UTC",
+  })
+    .format(parsed)
+    .replace(".", "")
+    .slice(0, 3)
+    .toLocaleLowerCase("es-PE");
+};
+
+const detailTone = (detail: string | null) => {
+  const normalized = detail?.trim().toLocaleLowerCase("es-PE") ?? "";
+  if (normalized.includes("anticipo")) {
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  }
+  if (normalized.includes("saldo")) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  return "border-border bg-muted/60 text-muted-foreground";
 };
 
 export function IncomeTable({ rows, loading }: Props) {
   const columns = useMemo<DataTableColumn<Income>[]>(
     () => [
       {
-        id: "saleOrderId",
-        header: "Pedido",
-        accessorKey: "saleOrderId",
+        id: "month",
+        header: "Mes",
         hideable: false,
-        cell: (row) => row.saleOrderId.slice(0, 8),
+        width: "72px",
+        className: "font-semibold uppercase text-muted-foreground",
+        cell: (row) => paymentMonth(row.date),
+        sortAccessor: (row) => new Date(row.date),
       },
-      { id: "clientName", header: "Cliente", accessorKey: "clientName", hideable: false },
+      {
+        id: "date",
+        header: "Fecha de pago",
+        accessorKey: "date",
+        hideable: false,
+        width: "132px",
+        cell: (row) => paymentDate(row.date),
+        sortAccessor: (row) => new Date(row.date),
+      },
+      {
+        id: "operationNumber",
+        header: "N.º de operación",
+        hideable: false,
+        copy: true,
+        cell: (row) => row.operationNumber ?? "-",
+      },
+      {
+        id: "method",
+        header: "Método de pago",
+        accessorKey: "method",
+        hideable: false,
+      },
       {
         id: "amount",
         header: "Monto",
         accessorKey: "amount",
         hideable: false,
-        className: "text-right font-medium tabular-nums",
+        className: "text-right font-semibold tabular-nums",
         headerClassName: "text-right [&>div]:justify-end",
         cell: (row) => money(row.amount),
       },
-      { id: "method", header: "Metodo", accessorKey: "method" },
+      {
+        id: "saleOrderNumber",
+        header: "N.º de pedido",
+        accessorKey: "saleOrderNumber",
+        hideable: false,
+        copy: true,
+        className: "font-semibold tabular-nums",
+        cardTitle: true,
+      },
+      {
+        id: "detail",
+        header: "Detalle",
+        accessorKey: "detail",
+        hideable: false,
+        cell: (row) => (
+          <span
+            className={`inline-flex max-w-full rounded-full border px-2 py-0.5 text-[11px] font-semibold ${detailTone(row.detail)}`}
+            title={row.detail ?? "Sin detalle"}
+          >
+            <span className="truncate">{row.detail?.trim() || "Sin detalle"}</span>
+          </span>
+        ),
+      },
       {
         id: "account",
-        header: "Cuenta",
-        cell: (row) => row.companyPaymentAccountLabel ?? "Sin cuenta",
-      },
-      {
-        id: "operationNumber",
-        header: "Operacion",
-        cell: (row) => row.operationNumber ?? "-",
-      },
-      {
-        id: "date",
-        header: "Fecha",
-        accessorKey: "date",
-        cell: (row) => date(row.date),
-      },
-      {
-        id: "evidence",
-        header: "Evidencia",
-        cell: (row) =>
-          row.evidenceUrl ? (
-            <a className="font-medium text-teal-700 hover:underline" href={row.evidenceUrl} target="_blank" rel="noreferrer">
-              Ver
-            </a>
-          ) : (
-            "Sin evidencia"
-          ),
+        header: "Cuenta destino",
+        hideable: false,
+        cell: (row) => row.companyPaymentAccountLabel ?? "Sin cuenta asignada",
       },
     ],
     [],
@@ -81,7 +138,8 @@ export function IncomeTable({ rows, loading }: Props) {
       hoverable
       animated={false}
       responsiveCards
-      maxHeight="560px"
+      initialSort={{ columnId: "date", direction: "desc" }}
+      maxHeight="none"
     />
   );
 }
