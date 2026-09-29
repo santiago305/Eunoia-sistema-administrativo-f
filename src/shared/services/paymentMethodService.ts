@@ -14,6 +14,7 @@ import type {
   PaymentMethodPivot,
   SetPaymentMethodActiveDto,
   UpdatePaymentMethodDto,
+  UpdateCompanyMethodDto,
 } from "@/features/payment-methods/types/paymentMethod";
 
 export const createPaymentMethod = async (payload: CreatePaymentMethodDto): Promise<PaymentMethod> => {
@@ -81,6 +82,17 @@ export const deleteCompanyMethod = async (
   companyMethodId: string
 ): Promise<CompanyMethod> => {
   const response = await axiosInstance.delete(API_COMPANY_METHODS_GROUP.remove(companyMethodId));
+  return response.data;
+};
+
+export const updateCompanyMethod = async (
+  companyMethodId: string,
+  payload: UpdateCompanyMethodDto,
+): Promise<CompanyMethod> => {
+  const response = await axiosInstance.patch(
+    API_COMPANY_METHODS_GROUP.update(companyMethodId),
+    payload,
+  );
   return response.data;
 };
 

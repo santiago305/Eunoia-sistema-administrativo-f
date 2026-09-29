@@ -64,9 +64,18 @@ export type PaymentMethodGetByIdResponse = {
 
 
 export type CompanyMethod = {
+  companyMethodId?: string;
   companyId: string;
   methodId: string;
   requiresVoucher?: boolean;
+  evidencePolicy?: CompanyMethodEvidencePolicy;
+  enabled?: boolean;
+  isDefault?: boolean;
+};
+
+export type UpdateCompanyMethodDto = {
+  isDefault?: boolean;
+  enabled?: boolean;
   evidencePolicy?: CompanyMethodEvidencePolicy;
 };
 

@@ -5,7 +5,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { CreditCard, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { CreditCard, LockKeyhole, Plus, ReceiptText, Star, Trash2 } from "lucide-react";
 import { Modal } from "@/shared/components/settings/modal";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
@@ -22,6 +22,7 @@ import {
   deleteCompanyMethod,
   getAllPaymentMethods,
   getPaymentMethodsByCompany,
+  updateCompanyMethod,
 } from "@/shared/services/paymentMethodService";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -60,6 +61,7 @@ export function PaymentMethodListModal({
   const [pendingRemoveMethod, setPendingRemoveMethod] =
     useState<PaymentMethodPivot | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [settingPreferredId, setSettingPreferredId] = useState<string | null>(null);
 
   const loadCompanyMethods = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -101,9 +103,10 @@ export function PaymentMethodListModal({
 
   const sortedRows = useMemo(
     () =>
-      [...rows].sort((left, right) =>
-        left.name.localeCompare(right.name, "es", { sensitivity: "base" }),
-      ),
+      [...rows].sort((left, right) => {
+        if (left.isDefault !== right.isDefault) return left.isDefault ? -1 : 1;
+        return left.name.localeCompare(right.name, "es", { sensitivity: "base" });
+      }),
     [rows],
   );
 
@@ -187,6 +190,36 @@ export function PaymentMethodListModal({
     [canManagePaymentMethods, loadCompanyMethods, removing, showFeedback],
   );
 
+  const setPreferredMethod = useCallback(
+    async (row: PaymentMethodPivot) => {
+      if (
+        !row.companyMethodId ||
+        row.isDefault ||
+        !canManagePaymentMethods ||
+        settingPreferredId
+      ) return;
+
+      clearFeedback();
+      setSettingPreferredId(row.companyMethodId);
+      try {
+        await updateCompanyMethod(row.companyMethodId, { isDefault: true });
+        showFeedback(successResponse(`${row.name} ahora es el método preferido.`));
+        await loadCompanyMethods({ silent: true });
+      } catch {
+        showFeedback(errorResponse("No se pudo cambiar el método preferido."));
+      } finally {
+        setSettingPreferredId(null);
+      }
+    },
+    [
+      canManagePaymentMethods,
+      clearFeedback,
+      loadCompanyMethods,
+      settingPreferredId,
+      showFeedback,
+    ],
+  );
+
   const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(
     () => [
       {
@@ -204,6 +237,35 @@ export function PaymentMethodListModal({
             </span>
           </div>
         ),
+      },
+      {
+        id: "preferred",
+        header: "Preferido",
+        sortAccessor: "isDefault",
+        cell: (row) =>
+          row.isDefault ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+              <Star className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+              Preferido
+            </span>
+          ) : canManagePaymentMethods ? (
+            <SystemButton
+              variant="ghost"
+              size="custom"
+              className="h-9 rounded-lg px-2.5 text-muted-foreground hover:bg-amber-50 hover:text-amber-800"
+              onClick={() => void setPreferredMethod(row)}
+              disabled={Boolean(settingPreferredId)}
+              loading={settingPreferredId === row.companyMethodId}
+              aria-label={`Marcar ${row.name} como método preferido`}
+              aria-pressed="false"
+              title="Marcar como preferido"
+            >
+              <Star className="h-4 w-4" aria-hidden="true" />
+              <span className="ml-1.5">Elegir</span>
+            </SystemButton>
+          ) : (
+            <span className="text-xs text-muted-foreground">No</span>
+          ),
       },
       {
         id: "requiresVoucher",
@@ -231,8 +293,22 @@ export function PaymentMethodListModal({
             {
               id: "actions",
               header: "",
-              cell: (row: PaymentMethodPivot) => (
-                <div className="flex justify-end">
+              cell: (row: PaymentMethodPivot) => {
+                const isBankTransfer = row.code === "BANK_TRANSFER";
+                if (isBankTransfer) {
+                  return (
+                    <div className="flex justify-end">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground" title="Método obligatorio">
+                        <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" />
+                        Obligatorio
+                      </span>
+                    </div>
+                  );
+                }
+                if (row.isDefault) return null;
+
+                return (
+                  <div className="flex justify-end">
                   <SystemButton
                     variant="ghost"
                     size="custom"
@@ -243,17 +319,18 @@ export function PaymentMethodListModal({
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </SystemButton>
-                </div>
-              ),
-              className: "w-14 text-right",
-              headerClassName: "w-14 text-right",
+                  </div>
+                );
+              },
+              className: "w-28 text-right",
+              headerClassName: "w-28 text-right",
               hideable: false,
               sortable: false,
             } satisfies DataTableColumn<PaymentMethodPivot>,
           ]
         : []),
     ],
-    [canManagePaymentMethods],
+    [canManagePaymentMethods, setPreferredMethod, settingPreferredId],
   );
 
   return (

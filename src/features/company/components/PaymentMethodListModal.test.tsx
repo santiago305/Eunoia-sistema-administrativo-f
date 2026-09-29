@@ -7,6 +7,7 @@ const getPaymentMethodsByCompanyMock = vi.hoisted(() => vi.fn());
 const getAllPaymentMethodsMock = vi.hoisted(() => vi.fn());
 const deleteCompanyMethodMock = vi.hoisted(() => vi.fn());
 const createCompanyMethodMock = vi.hoisted(() => vi.fn());
+const updateCompanyMethodMock = vi.hoisted(() => vi.fn());
 const showFeedbackMock = vi.hoisted(() => vi.fn());
 const clearFeedbackMock = vi.hoisted(() => vi.fn());
 
@@ -23,6 +24,7 @@ vi.mock("@/shared/hooks/useFeedbackToast", () => ({
 
 vi.mock("@/shared/services/paymentMethodService", () => ({
   createCompanyMethod: createCompanyMethodMock,
+  updateCompanyMethod: updateCompanyMethodMock,
   deleteCompanyMethod: deleteCompanyMethodMock,
   getAllPaymentMethods: getAllPaymentMethodsMock,
   getPaymentMethodsByCompany: getPaymentMethodsByCompanyMock,
@@ -142,6 +144,7 @@ describe("PaymentMethodListModal", () => {
     ]);
     deleteCompanyMethodMock.mockResolvedValue(undefined);
     createCompanyMethodMock.mockResolvedValue(undefined);
+    updateCompanyMethodMock.mockResolvedValue(undefined);
   });
 
   it("desvincula exactamente la relación empresarial tras confirmar y recarga la lista", async () => {
@@ -289,6 +292,78 @@ describe("PaymentMethodListModal", () => {
         enabled: true,
       });
     });
+  });
+
+  it("permite cambiar el método preferido y recarga la lista", async () => {
+    getPaymentMethodsByCompanyMock
+      .mockResolvedValueOnce([
+        {
+          companyMethodId: "company-method-bank",
+          methodId: "method-bank",
+          name: "Transferencia bancaria",
+          code: "BANK_TRANSFER",
+          isDefault: true,
+          isActive: true,
+        },
+        {
+          companyMethodId: "company-method-card",
+          methodId: "method-card",
+          name: "Tarjeta",
+          isDefault: false,
+          isActive: true,
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Marcar Tarjeta como método preferido",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(updateCompanyMethodMock).toHaveBeenCalledWith(
+        "company-method-card",
+        { isDefault: true },
+      );
+      expect(getPaymentMethodsByCompanyMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("no muestra la acción de desvincular para transferencia bancaria", async () => {
+    getPaymentMethodsByCompanyMock.mockResolvedValue([
+      {
+        companyMethodId: "company-method-bank",
+        methodId: "method-bank",
+        name: "Transferencia bancaria",
+        code: "BANK_TRANSFER",
+        isDefault: true,
+        isActive: true,
+      },
+    ]);
+
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
+
+    expect(await screen.findByText("Obligatorio")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Desvincular Transferencia bancaria",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("organiza los controles en un formulario accesible y responsivo", async () => {

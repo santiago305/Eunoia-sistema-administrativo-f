@@ -32,7 +32,7 @@ export function PaymentMethodActionsMenu({
           id: "toggle-active",
           label: method.isActive ? "Desactivar" : "Activar",
           icon: <Power className="h-4 w-4 text-black/60" />,
-          hidden: !canManage,
+          hidden: !canManage || (method.code === "BANK_TRANSFER" && method.isActive),
           disabled: busy,
           onClick: () => onToggleActive(method),
         },
