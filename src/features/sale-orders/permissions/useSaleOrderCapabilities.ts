@@ -31,6 +31,7 @@ export const useSaleOrderCapabilities = () => {
       canManageWorkflows: allowed(P.manageWorkflows), canViewStatistics: allowed(P.viewStatistics),
       canAssignWorkflow: allowed(P.assignWorkflow), canCancel: allowed(P.cancel),
       canConfirmDelivery: allowed(P.confirmDelivery),
+      canRepairWorkflow: allowed(P.repairWorkflow),
     };
   }, [allowed]);
 };

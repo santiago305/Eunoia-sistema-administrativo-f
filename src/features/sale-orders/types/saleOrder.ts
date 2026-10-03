@@ -31,6 +31,7 @@ export enum SaleOrderRealtimeSourceEnum {
   PAYMENT_CREATED = "payment-created",
   PAYMENT_DELETED = "payment-deleted",
   AUTOMATIC_WORKFLOW = "automatic-workflow",
+  SALE_ORDER_WORKFLOW_REPAIR = "sale-order-workflow-repair",
   SALE_ORDER_DELETED = "sale-order-deleted",
   SALE_ORDER_RESTORED = "sale-order-restored",
   SALE_ORDERS_BULK_DELETED = "sale-orders-bulk-deleted",
@@ -48,6 +49,7 @@ export type SaleOrderRealtimeSource =
   | "payment-created"
   | "payment-deleted"
   | "automatic-workflow"
+  | "sale-order-workflow-repair"
   | "sale-order-deleted"
   | "sale-order-restored"
   | "sale-orders-bulk-deleted"

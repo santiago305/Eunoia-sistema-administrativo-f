@@ -55,6 +55,36 @@ export type ChangeSaleOrderStateResponse = {
   warnings: string[];
 };
 
+export type RepairSaleOrderWorkflowResponse = {
+  repaired: boolean;
+  reason: string;
+  saleOrderId: string;
+  workflow: {
+    fromId: string | null;
+    toId: string;
+    fromRevision?: number;
+    revision: number;
+  };
+  state: {
+    fromId: string;
+    fromName: string;
+    toId: string;
+    toName: string;
+  };
+  stock: {
+    from: "NONE" | "RESERVED" | "CONSUMED";
+    to: "NONE" | "RESERVED" | "CONSUMED";
+    actions: string[];
+  };
+  changes?: {
+    workflow: boolean;
+    state: boolean;
+    warehouse: boolean;
+    markers: boolean;
+    stock: boolean;
+  };
+};
+
 export type CorrectSaleOrderTotalResponse = {
   saleOrderId: string;
   previousTotal: number;
@@ -511,6 +541,15 @@ export const changeSaleOrderState = async (
       transitionId,
       metadata,
     },
+  );
+  return response.data;
+};
+
+export const repairSaleOrderWorkflow = async (
+  saleOrderId: string,
+): Promise<RepairSaleOrderWorkflowResponse> => {
+  const response = await axiosInstance.post<RepairSaleOrderWorkflowResponse>(
+    API_SALE_ORDERS_GROUP.repairWorkflow(saleOrderId),
   );
   return response.data;
 };

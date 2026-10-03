@@ -42,4 +42,5 @@ export const SALE_ORDER_PERMISSIONS = {
   viewPdf: "sale_orders.pdf.view",
   viewWorkflows: "sale_orders.workflows.view",
   manageWorkflows: "sale_orders.workflows.manage",
+  repairWorkflow: "sale_orders.repair_workflow",
 } as const;

@@ -506,6 +506,7 @@ export const API_SALE_ORDERS_GROUP = {
   correctTotal: (id: string) => `/sale-orders/${id}/correct-total`,
   updateWithClient: (id: string) => `/sale-orders/${id}/with-client`,
   assignWorkflow: (id: string) => `/sale-orders/${id}/assign-workflow`,
+  repairWorkflow: (id: string) => `/sale-orders/${id}/repair-workflow`,
   availableTransitions: (id: string) =>
     `/sale-orders/${id}/available-transitions`,
   changeState: (id: string) => `/sale-orders/${id}/change-state`,

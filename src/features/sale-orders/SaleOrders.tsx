@@ -1469,10 +1469,12 @@ export default function SaleOrders() {
                     closeModal();
                     await loadOrders();
                 }}
+                onOrderChanged={updateUx}
                 capabilities={{
                     canEdit: capabilities.canEdit,
                     canManageAdvancedOrders: capabilities.canManageAdvancedOrders,
                     canAssignWorkflow: capabilities.canAssignWorkflow,
+                    canRepairWorkflow: capabilities.canRepairWorkflow,
                 }}
             />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />

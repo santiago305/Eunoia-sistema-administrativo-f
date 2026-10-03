@@ -1,4 +1,4 @@
-import { AlertTriangle, PencilLine, Plus, Save, X } from "lucide-react";
+import { AlertTriangle, PencilLine, Plus, Save, Wrench, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -21,6 +21,7 @@ import {
   correctSaleOrderTotal,
   getSaleOrderEditorCatalogs,
   matchSaleOrderProductPack,
+  repairSaleOrderWorkflow,
   saveSaleOrderWithClient,
 } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
@@ -61,17 +62,20 @@ import {
 } from "../useSaleOrderPaymentOptions";
 import { buildSaleOrderWorkflowOptions } from "../../utils/saleOrderWorkflowOptions";
 import { buildSaleOrderReservationFeedback } from "../../utils/saleOrderReservationFeedback";
+import { buildSaleOrderRepairFeedback } from "../../utils/saleOrderRepairFeedback";
 
 type Props = {
   mode: "create" | "edit";
   order: SaleOrder | null;
   onCancel: () => void;
   onSaved: (saleOrderId: string) => void | Promise<void>;
+  onOrderChanged?: () => void | Promise<void>;
   onDirtyChange?: (dirty: boolean) => void;
   onFooterChange?: (footer: ReactNode | null) => void;
   readOnly?: boolean;
   canManageAdvancedOrders?: boolean;
   canAssignWorkflow?: boolean;
+  canRepairWorkflow?: boolean;
 };
 
 const money = new Intl.NumberFormat("es-PE", {
@@ -84,11 +88,13 @@ export function SaleOrderEditor({
   order,
   onCancel,
   onSaved,
+  onOrderChanged,
   onDirtyChange,
   onFooterChange,
   readOnly = false,
   canManageAdvancedOrders = true,
   canAssignWorkflow = true,
+  canRepairWorkflow = true,
 }: Props) {
   const { company } = useCompany();
   const companyId = company?.companyId ?? "";
@@ -101,6 +107,8 @@ export function SaleOrderEditor({
   const [correctingTotal, setCorrectingTotal] = useState(false);
   const [correctTotalOpen, setCorrectTotalOpen] = useState(false);
   const [advancedReassignmentOpen, setAdvancedReassignmentOpen] = useState(false);
+  const [repairConfirmOpen, setRepairConfirmOpen] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   const [matchingProductPack, setMatchingProductPack] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [supplyRecipeLoading, setSupplyRecipeLoading] = useState(false);
@@ -606,10 +614,65 @@ export function SaleOrderEditor({
       ? "Modifica algún dato del pedido para actualizarlo."
       : null);
 
+  const repair = useCallback(async () => {
+    if (!order) return;
+    setRepairing(true);
+    try {
+      const result = await repairSaleOrderWorkflow(order.id);
+      setRepairConfirmOpen(false);
+      if (!result.repaired) {
+        sileo.success({ title: buildSaleOrderRepairFeedback(result) });
+      } else {
+        sileo.success({
+          title: buildSaleOrderRepairFeedback(result),
+        });
+        try {
+          await onOrderChanged?.();
+        } catch {
+          sileo.error({
+            title: "Pedido reparado, pero no se pudo refrescar la vista.",
+          });
+        }
+      }
+    } catch (error) {
+      sileo.error({ title: parseApiError(error, "No se pudo reparar el flujo del pedido.") });
+    } finally {
+      setRepairing(false);
+    }
+  }, [onOrderChanged, order]);
+
   const footerActions = useMemo(
     () => (
-      readOnly ? <div className="flex justify-end"><SystemButton type="button" variant="outline" leftIcon={<X className="h-4 w-4" />} onClick={onCancel}>Cerrar</SystemButton></div> : (
+      readOnly ? <div className="flex justify-end gap-2">
+        {mode === "edit" && order && order.isActive !== false && canRepairWorkflow ? (
+          <SystemButton
+            type="button"
+            variant="warning"
+            leftIcon={<Wrench className="h-4 w-4" aria-hidden="true" />}
+            onClick={() => setRepairConfirmOpen(true)}
+            disabled={repairing}
+            loading={repairing}
+            tooltip="Analizar y reparar con el flujo vigente"
+          >
+            Reparar
+          </SystemButton>
+        ) : null}
+        <SystemButton type="button" variant="outline" leftIcon={<X className="h-4 w-4" />} onClick={onCancel}>Cerrar</SystemButton>
+      </div> : (
       <div className="flex justify-end gap-2">
+        {mode === "edit" && order && order.isActive !== false && canRepairWorkflow ? (
+          <SystemButton
+            type="button"
+            variant="warning"
+            leftIcon={<Wrench className="h-4 w-4" aria-hidden="true" />}
+            onClick={() => setRepairConfirmOpen(true)}
+            disabled={saving || repairing || isDirty}
+            loading={repairing}
+            tooltip={isDirty ? "Guarda o descarta los cambios antes de reparar." : "Analizar y reparar con el flujo vigente"}
+          >
+            Reparar
+          </SystemButton>
+        ) : null}
         <SystemButton
           type="button"
           variant="outline"
@@ -634,7 +697,7 @@ export function SaleOrderEditor({
         </SystemButton>
       </div>)
     ),
-    [mode, onCancel, readOnly, save, saveDisabledMessage, saving],
+    [canRepairWorkflow, isDirty, mode, onCancel, order, readOnly, repair, repairing, save, saveDisabledMessage, saving],
   );
 
   useEffect(() => {
@@ -945,6 +1008,19 @@ export function SaleOrderEditor({
             </ul>
           </div>
         }
+      />
+      <AlertModal
+        open={repairConfirmOpen}
+        type="warning"
+        title="Reparar flujo del pedido"
+        confirmText="Reparar pedido"
+        cancelText="Cancelar"
+        loading={repairing}
+        onClose={() => {
+          if (!repairing) setRepairConfirmOpen(false);
+        }}
+        onConfirm={() => void repair()}
+        message="Se analizará el pedido con la versión vigente del flujo y, si corresponde, se corregirá el estado y el inventario."
       />
     </div>
   );
