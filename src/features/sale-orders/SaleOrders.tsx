@@ -570,7 +570,18 @@ export default function SaleOrders() {
                         : `Fila ${error.rowNumber}: ${error.message}`,
                 )
                 .join(" ");
-            showFeedbackRef.current(response.failedRows > 0 ? errorResponse(errorDetails ? `${baseMessage} ${errorDetails}` : baseMessage) : successResponse(baseMessage));
+            const warningDetails = (response.warnings ?? [])
+                .slice(0, 3)
+                .map((warning) =>
+                    new RegExp(`\\bfila\\s+${warning.rowNumber}\\b`, "i").test(warning.message)
+                        ? warning.message
+                        : `Fila ${warning.rowNumber}: ${warning.message}`,
+                )
+                .join(" ");
+            const feedbackMessage = [baseMessage, errorDetails, warningDetails]
+                .filter(Boolean)
+                .join(" ");
+            showFeedbackRef.current(response.failedRows > 0 ? errorResponse(feedbackMessage) : successResponse(feedbackMessage));
             await updateUx();
         } catch (error) {
             showFeedbackRef.current(errorResponse(parseApiError(error)));

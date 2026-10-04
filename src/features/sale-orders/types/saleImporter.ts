@@ -109,7 +109,14 @@ export const saleOrderImportFields: ImportField[] = [
     key: "deliveryCost", 
     label: "Tarifa", 
     type: "number", 
-    aliases: ["Tarifa", "tarifa"] },
+    aliases: [
+      "Tarifa",
+      "tarifa",
+      "Tarifa de envío recolectada del cliente",
+      "tarifa de envío recolectada del cliente",
+      "Tarifa de envio recolectada del cliente",
+      "tarifa de envio recolectada del cliente",
+    ] },
   { 
     key: "internalNote", 
     label: "Nota interna", 

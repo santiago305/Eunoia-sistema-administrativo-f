@@ -25,6 +25,14 @@ describe("sale order phone import", () => {
     },
   );
 
+  it("maps the shipping amount from the real export header", () => {
+    expect(
+      autoMapColumns(saleOrderImportFields, [
+        "Tarifa de envío recolectada del cliente",
+      ]).deliveryCost,
+    ).toBe("Tarifa de envío recolectada del cliente");
+  });
+
   it("requires an imported order total greater than zero", () => {
     const totalField = saleOrderImportFields.find(
       (field) => field.key === "total",

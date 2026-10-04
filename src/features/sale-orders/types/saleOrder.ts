@@ -426,6 +426,7 @@ export type SaleOrderJsonImportRow = {
   productCodes: string;
   quantity?: number;
   total: number;
+  deliveryCost?: number;
   advance?: number;
   codAmount?: number;
   internalNote?: string;
@@ -467,6 +468,10 @@ export type SaleOrderJsonImportPreviewResponse = {
     }>;
   }>;
   errors: Array<{
+    rowNumber: number;
+    message: string;
+  }>;
+  warnings?: Array<{
     rowNumber: number;
     message: string;
   }>;
