@@ -28,6 +28,7 @@ export const SALE_ORDER_PERMISSIONS = {
   createPayment: "sale_orders.payments.create",
   updatePayment: "sale_orders.payments.update",
   deletePayment: "sale_orders.payments.delete",
+  voidPayment: "sale_orders.payments.void",
   viewAttachments: "sale_orders.attachments.view",
   uploadAttachment: "sale_orders.attachments.upload",
   deleteAttachment: "sale_orders.attachments.delete",

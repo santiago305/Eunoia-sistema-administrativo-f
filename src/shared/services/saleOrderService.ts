@@ -623,6 +623,32 @@ export const deleteSaleOrderPayment = async (
   return response.data;
 };
 
+export type VoidSaleOrderPaymentResponse = {
+  type: "success";
+  message: string;
+  data: {
+    incomeId: string;
+    saleOrderId: string;
+    status: "VOIDED";
+    amount: number;
+    voidedAt: string | null;
+    voidedByUserId: string | null;
+    voidReason: string | null;
+  };
+};
+
+export const voidSaleOrderPayment = async (
+  saleOrderId: string,
+  paymentId: string,
+  reason: string,
+): Promise<VoidSaleOrderPaymentResponse> => {
+  const response = await axiosInstance.post<VoidSaleOrderPaymentResponse>(
+    API_SALE_ORDERS_GROUP.voidPayment(saleOrderId, paymentId),
+    { reason },
+  );
+  return response.data;
+};
+
 export const getSaleOrderSearchState =
   async (): Promise<SaleOrderSearchStateResponse> => {
     const response = await axiosInstance.get<SaleOrderSearchStateResponse>(

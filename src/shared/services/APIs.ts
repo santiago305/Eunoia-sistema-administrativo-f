@@ -425,6 +425,8 @@ export const API_PAYMENT_GROUP = {
 export const API_INCOME_GROUP = {
   list: "/income",
   summary: "/income/summary",
+  evidence: (incomeId: string) => `/income/${incomeId}/evidence`,
+  evidenceContent: (incomeId: string) => `/income/${incomeId}/evidence/content`,
 };
 
 export const API_ADMIN_FINANCE_GROUP = {
@@ -517,6 +519,8 @@ export const API_SALE_ORDERS_GROUP = {
   payments: (id: string) => `/sale-orders/${id}/payments`,
   paymentById: (id: string, paymentId: string) =>
     `/sale-orders/${id}/payments/${paymentId}`,
+  voidPayment: (id: string, paymentId: string) =>
+    `/sale-orders/${id}/payments/${paymentId}/void`,
   searchState: "/sale-orders/search-state",
   editorCatalogs: "/sale-orders/editor-catalogs",
   statistics: "/sale-orders/statistics",

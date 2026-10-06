@@ -46,6 +46,7 @@ export function Pagination({ page, limit, total, onPageChange, padding="py-3" }:
       <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2">
         <button
           type="button"
+          aria-label="Página anterior"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -65,6 +66,7 @@ export function Pagination({ page, limit, total, onPageChange, padding="py-3" }:
 
               <button
                 type="button"
+                aria-current={pageNumber === page ? "page" : undefined}
                 onClick={() => onPageChange(pageNumber)}
                 className={[
                   "rounded-xl border px-3 py-2 text-sm transition",
@@ -81,6 +83,7 @@ export function Pagination({ page, limit, total, onPageChange, padding="py-3" }:
 
         <button
           type="button"
+          aria-label="Página siguiente"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"

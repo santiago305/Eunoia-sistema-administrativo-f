@@ -56,6 +56,9 @@ export type SaleOrderEditorPayment = {
   photo?: File | null;
   existingPhotoUrl?: string | null;
   existingAttachmentId?: string | null;
+  status?: "DRAFT" | "POSTED" | "VOIDED";
+  voidedAt?: string | null;
+  voidReason?: string | null;
 };
 
 export type SaleOrderEditorSupply = Omit<SaleOrderSupplyInput, "quantity"> & {
@@ -300,6 +303,9 @@ export function mapSaleOrderToEditorForm(
         existingPhotoUrl:
           attachment?.url ?? payment.paymentPhoto ?? null,
         existingAttachmentId: attachment?.id ?? null,
+        status: payment.status ?? "POSTED",
+        voidedAt: payment.voidedAt ?? null,
+        voidReason: payment.voidReason ?? null,
       };
     }),
     shippingPhoto: null,

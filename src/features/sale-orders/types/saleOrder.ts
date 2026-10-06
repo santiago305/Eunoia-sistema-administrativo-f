@@ -279,6 +279,9 @@ export type SaleOrderAttachment = {
   url: string;
   note: string | null;
   createdAt: string;
+  voidedAt?: string | null;
+  voidedByUserId?: string | null;
+  voidReason?: string | null;
 };
 
 export type SaleOrderEditPolicy = {
@@ -495,6 +498,9 @@ export type SaleOrderPayment = {
   note: string | null;
   paymentPhoto?: string | null;
   createdAt: string;
+  voidedAt?: string | null;
+  voidedByUserId?: string | null;
+  voidReason?: string | null;
 };
 
 export type SaleOrder = {

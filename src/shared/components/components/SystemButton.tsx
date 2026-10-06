@@ -5,7 +5,12 @@ import {
 } from "react";
 import { Loader2 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 export type ButtonVariant =
   | "primary"
@@ -86,8 +91,9 @@ export const SystemButton = forwardRef<HTMLButtonElement, SystemButtonProps>(
 
     return (
       tooltip ? (
-        <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
+        <TooltipProvider delayDuration={0}>
+          <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
               <button
                 ref={ref}
                 type={type}
@@ -114,9 +120,10 @@ export const SystemButton = forwardRef<HTMLButtonElement, SystemButtonProps>(
                   <span className="flex items-center justify-center">{rightIcon}</span>
                 )}
               </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">{tooltip}</TooltipContent>
-        </Tooltip>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{tooltip}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ) : (
         <button
           ref={ref}

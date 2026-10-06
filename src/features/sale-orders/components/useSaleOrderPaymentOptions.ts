@@ -23,12 +23,12 @@ type UseSaleOrderPaymentOptionsConfig = {
 const normalizePaymentMethods = (paymentMethods: PaymentMethodPivot[]) => {
   const normalized = (paymentMethods ?? []).map((method) => ({
     ...method,
-    name: (method.name ?? "").trim().toUpperCase(),
+    name: (method.name ?? "").trim(),
   }));
 
   normalized.sort((left, right) => {
-    const leftIsCash = left.name === "EFECTIVO";
-    const rightIsCash = right.name === "EFECTIVO";
+    const leftIsCash = left.code === "CASH";
+    const rightIsCash = right.code === "CASH";
     if (leftIsCash && !rightIsCash) return -1;
     if (!leftIsCash && rightIsCash) return 1;
     return left.name.localeCompare(right.name, "es");
@@ -49,12 +49,11 @@ export const buildSaleOrderPaymentMethodOptions = (
   if (fromApi.length > 0) return fromApi;
 
   return [
-    { value: PaymentTypes.EFECTIVO, label: "EFECTIVO", paymentMethodCode: "CASH" },
-    { value: PaymentTypes.TRANSFERENCIA, label: "TRANSFERENCIA", paymentMethodCode: "BANK_TRANSFER" },
-    { value: PaymentTypes.TARJETA, label: "TARJETA", paymentMethodCode: "CARD" },
-    { value: PaymentTypes.DEPOSITO, label: "DEPOSITO", paymentMethodCode: "BANK_DEPOSIT" },
-    { value: PaymentTypes.PLIN, label: "PLIN", paymentMethodCode: "DIGITAL_WALLET" },
-    { value: PaymentTypes.YAPE, label: "YAPE", paymentMethodCode: "DIGITAL_WALLET" },
+    { value: PaymentTypes.EFECTIVO, label: "Efectivo", paymentMethodCode: "CASH" },
+    { value: PaymentTypes.TRANSFERENCIA, label: "Trans. bancaria", paymentMethodCode: "BANK_TRANSFER" },
+    { value: PaymentTypes.TARJETA, label: "Tarjeta", paymentMethodCode: "CARD" },
+    { value: PaymentTypes.DEPOSITO, label: "Depósito bancario", paymentMethodCode: "BANK_DEPOSIT" },
+    { value: PaymentTypes.PLIN, label: "Billetera digital", paymentMethodCode: "DIGITAL_WALLET" },
   ];
 };
 

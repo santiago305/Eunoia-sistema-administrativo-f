@@ -1,57 +1,22 @@
-import { BadgeCheck, Clock3, ReceiptText, WalletCards } from "lucide-react";
+import { BadgeCheck, ChartNoAxesCombined, CircleAlert, Clock3, ReceiptText, WalletCards } from "lucide-react";
 import type { IncomeSummary } from "../types/income.types";
-import { IncomeSummaryCard } from "./IncomeSummaryCard";
+import { SummaryMetricCards, type SummaryMetricItem } from "@/shared/components/metrics/SummaryMetricCards";
 
 type Props = {
   summary: IncomeSummary | null;
+  loading?: boolean;
+  onStatusFilter?: (status: "POSTED" | "VOIDED") => void;
+  onObservedFilter?: () => void;
 };
 
-const money = (value: number) =>
-  new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(value || 0);
-
-export function IncomeKpiStrip({ summary }: Props) {
-  const registeredPayments =
-    summary?.byMethod.reduce((total, method) => total + method.count, 0) ?? 0;
-
-  const kpis = [
-    {
-      label: "Ingresado",
-      value: money(summary?.totalCollected ?? 0),
-      detail: `${registeredPayments} pago${registeredPayments === 1 ? "" : "s"} registrado${registeredPayments === 1 ? "" : "s"}`,
-      icon: WalletCards,
-      tone: "primary" as const,
-    },
-    {
-      label: "Pendiente de ingreso",
-      value: money(summary?.totalPending ?? 0),
-      detail: "Saldo total por cobrar",
-      icon: Clock3,
-      tone: "warning" as const,
-    },
-    {
-      label: "Pedidos pagados",
-      value: String(summary?.ordersPaid ?? 0),
-      detail: "Pedidos sin saldo pendiente",
-      icon: BadgeCheck,
-      tone: "success" as const,
-    },
-    {
-      label: "Pedidos pendientes",
-      value: String(summary?.ordersPending ?? 0),
-      detail: "Pedidos que requieren seguimiento",
-      icon: ReceiptText,
-      tone: "neutral" as const,
-    },
+export function IncomeKpiStrip({ summary, loading = false, onStatusFilter, onObservedFilter }: Props) {
+  const items: SummaryMetricItem[] = [
+    { key: "collected", label: "Ingresos cobrados", value: summary?.totalCollected ?? null, format: "currency", tone: "success", Icon: WalletCards, badgeLabel: `${summary?.postedPaymentsCount ?? 0} pagos`, description: "Cobros contabilizados", onClick: () => onStatusFilter?.("POSTED") },
+    { key: "pending", label: "Saldo pendiente", value: summary?.totalPending ?? null, format: "currency", tone: "warning", Icon: Clock3, badgeLabel: `${summary?.ordersPending ?? 0} pedidos`, description: "Saldo por cobrar" },
+    { key: "effectiveness", label: "Efectividad de cobranza", value: summary?.collectionEffectiveness ?? null, format: "percent", tone: "info", Icon: ChartNoAxesCombined, badgeLabel: "Total", description: "Cobrado sobre venta" },
+    { key: "average", label: "Ticket promedio cobrado", value: summary?.averageCollectedPayment ?? null, format: "currency", tone: "neutral", Icon: ReceiptText, badgeLabel: "Promedio", description: "Por pago contabilizado" },
+    { key: "observed", label: "Cobros observados", value: summary?.observedPaymentsCount ?? null, format: "number", tone: "danger", Icon: CircleAlert, badgeLabel: summary ? new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(summary.observedPaymentsAmount ?? 0) : "—", description: "Sin evidencia, cuenta o referencia", onClick: onObservedFilter },
+    { key: "voided", label: "Ingresos anulados", value: summary?.voidedPaymentsAmount ?? null, format: "currency", tone: "danger", Icon: BadgeCheck, badgeLabel: `${summary?.voidedPaymentsCount ?? 0} pagos`, description: "Conservan trazabilidad", onClick: () => onStatusFilter?.("VOIDED") },
   ];
-
-  return (
-    <section
-      className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-      aria-label="Resumen de ingresos"
-    >
-      {kpis.map((kpi) => (
-        <IncomeSummaryCard key={kpi.label} {...kpi} />
-      ))}
-    </section>
-  );
+  return <SummaryMetricCards items={items} loading={loading} columnsClassName="grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" ariaLabel="Resumen de ingresos" />;
 }
