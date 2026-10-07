@@ -64,6 +64,7 @@ export type IncomeListQuery = {
   q?: string;
   hasEvidence?: boolean;
   status?: "POSTED" | "VOIDED" | "ALL";
+  filters?: IncomeSearchRule[];
   page?: number;
   limit?: number;
 };
@@ -74,18 +75,21 @@ export type IncomeListResponse = {
 };
 
 export type IncomeSearchField =
-  | "client"
-  | "saleOrderId"
-  | "method"
-  | "account"
-  | "date"
-  | "amount"
+  | "status"
+  | "paymentMethodId"
+  | "detail"
+  | "companyPaymentAccountId"
   | "hasEvidence";
 
-export type IncomeSearchOperator = "contains" | "eq" | "range" | "gte" | "lte";
+export type IncomeSearchOperator = "in" | "contains" | "eq";
 export type IncomeSearchRule = SmartSearchRule<IncomeSearchField, IncomeSearchOperator>;
 
 export type IncomeSearchCatalogs = {
   methods?: DataTableSearchOption[];
   accounts?: DataTableSearchOption[];
+};
+
+export type IncomeSearchSnapshot = {
+  q: string;
+  filters: IncomeSearchRule[];
 };

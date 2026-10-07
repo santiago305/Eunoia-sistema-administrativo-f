@@ -3,13 +3,18 @@ import { API_INCOME_GROUP } from "@/shared/services/APIs";
 import { env } from "@/env";
 import type { IncomeEvidenceSummary, IncomeListQuery, IncomeListResponse, IncomeSummary } from "@/features/income/types/income.types";
 
+const serializeQuery = (query: IncomeListQuery = {}) => ({
+  ...query,
+  filters: query.filters?.length ? JSON.stringify(query.filters) : undefined,
+});
+
 export const listIncome = async (query: IncomeListQuery = {}): Promise<IncomeListResponse> => {
-  const response = await axiosInstance.get<IncomeListResponse>(API_INCOME_GROUP.list, { params: query });
+  const response = await axiosInstance.get<IncomeListResponse>(API_INCOME_GROUP.list, { params: serializeQuery(query) });
   return response.data;
 };
 
 export const getIncomeSummary = async (query: IncomeListQuery = {}): Promise<IncomeSummary> => {
-  const response = await axiosInstance.get<IncomeSummary>(API_INCOME_GROUP.summary, { params: query });
+  const response = await axiosInstance.get<IncomeSummary>(API_INCOME_GROUP.summary, { params: serializeQuery(query) });
   return response.data;
 };
 

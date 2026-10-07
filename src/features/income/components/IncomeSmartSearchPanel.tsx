@@ -1,11 +1,8 @@
 import { SmartSearchPanel, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
-import type { IncomeSearchCatalogs, IncomeSearchField, IncomeSearchRule } from "../types/income.types";
-import { buildIncomeSmartSearchColumns } from "../utils/incomeSmartSearch";
+import type { IncomeSearchCatalogs, IncomeSearchField, IncomeSearchRule, IncomeSearchSnapshot } from "../types/income.types";
+import { buildIncomeSmartSearchColumns, incomeRuleSummary } from "../utils/incomeSmartSearch";
 
-export type IncomeSearchSnapshot = {
-  q?: string;
-  filters: IncomeSearchRule[];
-};
+export type { IncomeSearchSnapshot } from "../types/income.types";
 
 type Props = {
   snapshot: IncomeSearchSnapshot;
@@ -36,10 +33,7 @@ export function IncomeSmartSearchPanel({
       onApplyRule={onApplyRule}
       onRemoveRule={onRemoveRule}
       getRule={(current, fieldId) => current.filters.find((rule) => rule.field === fieldId) ?? null}
-      getRuleSummary={(current, fieldId) => {
-        const rule = current.filters.find((item) => item.field === fieldId);
-        return rule?.value ?? rule?.values?.join(", ") ?? null;
-      }}
+      getRuleSummary={(current, fieldId) => incomeRuleSummary(current, fieldId, catalogs)}
       getSelectionCount={(current, fieldId) =>
         current.filters.find((item) => item.field === fieldId)?.values?.length ?? 0
       }

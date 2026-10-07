@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Ban, Image, ImageOff, ImagePlus, MoreHorizontal } from "lucide-react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -17,6 +17,8 @@ type Props = {
   pagination?: DataTablePaginationMeta;
   onPageChange?: (page: number) => void;
   onEvidence?: (row: Income) => void;
+  toolbarSearchContent?: ReactNode;
+  emptyMessage?: string;
 };
 
 const money = (value: number) =>
@@ -62,7 +64,11 @@ const detailTone = (detail: string | null) => {
   return "border-border bg-muted/60 text-muted-foreground";
 };
 
-export function IncomeTable({ rows, loading, canVoid = false, canViewEvidence = false, canAttachEvidence = false, onVoid, onEvidence, rangeDates, pagination, onPageChange }: Props) {
+const paymentMethodLabel = (row: Income) => row.paymentMethodCode === "BANK_TRANSFER"
+  ? "Trans. bancaria"
+  : row.paymentMethodName || row.method || "Sin método";
+
+export function IncomeTable({ rows, loading, canVoid = false, canViewEvidence = false, canAttachEvidence = false, onVoid, onEvidence, rangeDates, pagination, onPageChange, toolbarSearchContent, emptyMessage }: Props) {
   const columns = useMemo<DataTableColumn<Income>[]>(
     () => [
       {
@@ -117,7 +123,7 @@ export function IncomeTable({ rows, loading, canVoid = false, canViewEvidence = 
         header: "Método de pago",
         accessorKey: "paymentMethodName",
         hideable: true,
-        cell: (row) => row.paymentMethodName || row.method || "Sin método",
+        cell: paymentMethodLabel,
       },
       {
         id: "amount",
@@ -203,7 +209,7 @@ export function IncomeTable({ rows, loading, canVoid = false, canViewEvidence = 
       columns={columns}
       rowKey="incomeId"
       loading={loading}
-      emptyMessage="Sin ingresos para mostrar."
+      emptyMessage={emptyMessage ?? "Sin ingresos para mostrar."}
       hoverable
       animated={false}
       responsiveCards
@@ -213,6 +219,7 @@ export function IncomeTable({ rows, loading, canVoid = false, canViewEvidence = 
       onPageChange={onPageChange}
       selectableColumns
       rangeDates={rangeDates}
+      toolbarSearchContent={toolbarSearchContent}
     />
   );
 }

@@ -23,7 +23,7 @@ type UseSaleOrderPaymentOptionsConfig = {
 const normalizePaymentMethods = (paymentMethods: PaymentMethodPivot[]) => {
   const normalized = (paymentMethods ?? []).map((method) => ({
     ...method,
-    name: (method.name ?? "").trim(),
+    name: method.code === "BANK_TRANSFER" ? "Trans. bancaria" : (method.name ?? "").trim(),
   }));
 
   normalized.sort((left, right) => {
