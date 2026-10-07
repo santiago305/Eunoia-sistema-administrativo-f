@@ -97,6 +97,15 @@ export function IncomeTable({
         sortAccessor: (row) => new Date(row.date),
       },
       {
+        id: "saleOrderNumber",
+        header: "Pedido",
+        accessorKey: "saleOrderNumber",
+        hideable: false,
+        copy: true,
+        className: "font-semibold tabular-nums",
+        cardTitle: true,
+      },
+      {
         id: "detail",
         header: "Detalle",
         accessorKey: "detail",
@@ -119,7 +128,7 @@ export function IncomeTable({
       },
       {
         id: "method",
-        header: "Método de pago",
+        header: "Método",
         accessorKey: "paymentMethodName",
         hideable: true,
         cell: paymentMethodLabel,
@@ -174,7 +183,7 @@ export function IncomeTable({
             <button
               type="button"
               disabled={!canOpen}
-              className="mx-auto inline-flex items-center justify-center rounded p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-55"
+              className="mx-auto inline-flex cursor-pointer items-center justify-center rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-55"
               aria-label={label}
               title={label}
               onClick={(event) => {
@@ -182,7 +191,10 @@ export function IncomeTable({
                 if (canOpen) onEvidence?.(row);
               }}
             >
-              <Icon className="h-4 w-4" aria-hidden="true" />
+              <Icon
+                className={`h-4 w-4 ${available ? "text-muted-foreground hover:text-foreground" : "text-red-600 hover:text-red-700"}`}
+                aria-hidden="true"
+              />
             </button>
           );
         },
@@ -219,7 +231,7 @@ export function IncomeTable({
 
   return (
     <DataTable
-      tableId="income-table-v2"
+      tableId="income-table-v3"
       data={rows}
       columns={columns}
       rowKey="incomeId"
