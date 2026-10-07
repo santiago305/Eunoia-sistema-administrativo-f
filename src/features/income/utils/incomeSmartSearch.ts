@@ -96,7 +96,7 @@ const optionLabel = (options: Array<{ id: string; label: string }>, id: string) 
 
 export const buildIncomeSearchChips = (snapshot: IncomeSearchSnapshot, catalogs: IncomeSearchCatalogs = {}): DataTableSearchChip<IncomeSearchField>[] => {
   const chips: DataTableSearchChip<IncomeSearchField>[] = [];
-  if (snapshot.q) chips.push({ id: "q", label: `Pedido: ${snapshot.q}`, removeKey: "q" });
+  if (snapshot.q) chips.push({ id: "q", label: `Ingreso: ${snapshot.q}`, removeKey: "q" });
   const options = buildIncomeSmartSearchColumns(catalogs);
   snapshot.filters.forEach((rule) => {
     const field = options.find((item) => item.id === rule.field);

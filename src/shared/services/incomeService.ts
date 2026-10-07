@@ -1,7 +1,14 @@
 import axiosInstance from "@/shared/common/utils/axios";
 import { API_INCOME_GROUP } from "@/shared/services/APIs";
 import { env } from "@/env";
-import type { IncomeEvidenceSummary, IncomeListQuery, IncomeListResponse, IncomeSummary } from "@/features/income/types/income.types";
+import type {
+  IncomeEvidenceSummary,
+  IncomeListQuery,
+  IncomeListResponse,
+  IncomeSearchSnapshot,
+  IncomeSearchStateResponse,
+  IncomeSummary,
+} from "@/features/income/types/income.types";
 
 const serializeQuery = (query: IncomeListQuery = {}) => ({
   ...query,
@@ -15,6 +22,26 @@ export const listIncome = async (query: IncomeListQuery = {}): Promise<IncomeLis
 
 export const getIncomeSummary = async (query: IncomeListQuery = {}): Promise<IncomeSummary> => {
   const response = await axiosInstance.get<IncomeSummary>(API_INCOME_GROUP.summary, { params: serializeQuery(query) });
+  return response.data;
+};
+
+export const getIncomeSearchState = async (): Promise<IncomeSearchStateResponse> => {
+  const response = await axiosInstance.get<IncomeSearchStateResponse>(API_INCOME_GROUP.searchState);
+  return response.data;
+};
+
+export const saveIncomeSearchMetric = async (
+  name: string,
+  snapshot: IncomeSearchSnapshot,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_INCOME_GROUP.saveSearchMetric, { name, snapshot });
+  return response.data;
+};
+
+export const deleteIncomeSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_INCOME_GROUP.deleteSearchMetric(metricId));
   return response.data;
 };
 

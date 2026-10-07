@@ -12,6 +12,8 @@ type Props = {
   onApplySnapshot: (snapshot: IncomeSearchSnapshot) => void;
   onApplyRule: (rule: IncomeSearchRule) => void;
   onRemoveRule: (fieldId: IncomeSearchField) => void;
+  onDeleteMetric?: (metricId: string) => void;
+  filterQuery?: string;
 };
 
 export function IncomeSmartSearchPanel({
@@ -22,6 +24,8 @@ export function IncomeSmartSearchPanel({
   onApplySnapshot,
   onApplyRule,
   onRemoveRule,
+  onDeleteMetric,
+  filterQuery,
 }: Props) {
   return (
     <SmartSearchPanel
@@ -32,6 +36,7 @@ export function IncomeSmartSearchPanel({
       onApplySnapshot={onApplySnapshot}
       onApplyRule={onApplyRule}
       onRemoveRule={onRemoveRule}
+      onDeleteMetric={onDeleteMetric}
       getRule={(current, fieldId) => current.filters.find((rule) => rule.field === fieldId) ?? null}
       getRuleSummary={(current, fieldId) => incomeRuleSummary(current, fieldId, catalogs)}
       getSelectionCount={(current, fieldId) =>
@@ -40,6 +45,7 @@ export function IncomeSmartSearchPanel({
       fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Selecciona filtros para ingresos."
       initialVisibleFields={7}
+      filterQuery={filterQuery}
     />
   );
 }

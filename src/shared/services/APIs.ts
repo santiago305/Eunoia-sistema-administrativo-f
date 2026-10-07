@@ -425,6 +425,9 @@ export const API_PAYMENT_GROUP = {
 export const API_INCOME_GROUP = {
   list: "/income",
   summary: "/income/summary",
+  searchState: "/income/search-state",
+  saveSearchMetric: "/income/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/income/search-metrics/${metricId}`,
   evidence: (incomeId: string) => `/income/${incomeId}/evidence`,
   evidenceContent: (incomeId: string) => `/income/${incomeId}/evidence/content`,
 };

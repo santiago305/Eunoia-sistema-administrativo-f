@@ -93,3 +93,24 @@ export type IncomeSearchSnapshot = {
   q: string;
   filters: IncomeSearchRule[];
 };
+
+export type IncomeRecentSearch = {
+  recentId: string;
+  label: string;
+  snapshot: IncomeSearchSnapshot;
+  lastUsedAt: string;
+};
+
+export type IncomeSavedMetric = {
+  metricId: string;
+  name: string;
+  label: string;
+  snapshot: IncomeSearchSnapshot;
+  updatedAt: string;
+};
+
+export type IncomeSearchStateResponse = {
+  recent: IncomeRecentSearch[];
+  saved: IncomeSavedMetric[];
+  catalogs: IncomeSearchCatalogs;
+};

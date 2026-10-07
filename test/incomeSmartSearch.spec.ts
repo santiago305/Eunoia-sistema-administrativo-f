@@ -4,17 +4,15 @@ import { buildIncomeSmartSearchColumns } from "@/features/income/utils/incomeSma
 describe("incomeSmartSearch", () => {
   it("exposes administrative income filters", () => {
     const columns = buildIncomeSmartSearchColumns({
-      methods: [{ label: "Yape", value: "Yape" }],
-      accounts: [{ label: "BCP", value: "account-1" }],
+      methods: [{ label: "Yape", id: "Yape" }],
+      accounts: [{ label: "BCP", id: "account-1" }],
     });
 
     expect(columns.map((column) => column.key)).toEqual([
-      "client",
-      "saleOrderId",
-      "method",
-      "account",
-      "date",
-      "amount",
+      "status",
+      "paymentMethodId",
+      "detail",
+      "companyPaymentAccountId",
       "hasEvidence",
     ]);
   });

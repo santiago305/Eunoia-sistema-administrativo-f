@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { listIncome, getIncomeSummary } from "@/shared/services/incomeService";
-import { getPaymentMethodsByCompany } from "@/shared/services/paymentMethodService";
-import { listCompanyPaymentAccountsByCompany } from "@/shared/services/companyPaymentAccountService";
-import { useCompany } from "@/shared/hooks/useCompany";
-import type { Income, IncomeListQuery, IncomeSearchCatalogs, IncomeSearchSnapshot, IncomeSummary } from "./types/income.types";
+import {
+  deleteIncomeSearchMetric,
+  getIncomeSearchState,
+  getIncomeSummary,
+  listIncome,
+  saveIncomeSearchMetric,
+} from "@/shared/services/incomeService";
+import type {
+  Income,
+  IncomeListQuery,
+  IncomeSearchCatalogs,
+  IncomeSearchSnapshot,
+  IncomeSearchStateResponse,
+  IncomeSummary,
+} from "./types/income.types";
 import { IncomeKpiStrip } from "./components/IncomeKpiStrip";
 import { IncomeTable } from "./components/IncomeTable";
 import { IncomeSmartSearchPanel } from "./components/IncomeSmartSearchPanel";
@@ -37,34 +47,56 @@ export default function IncomePage() {
   const [range, setRange] = useState(() => currentLimaMonth());
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchState, setSearchState] = useState<IncomeSearchStateResponse | null>(null);
+  const [savingMetric, setSavingMetric] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [snapshot, setSnapshot] = useState<IncomeSearchSnapshot>({ q: "", filters: [] });
-  const [catalogs, setCatalogs] = useState<IncomeSearchCatalogs>({ methods: [], accounts: [] });
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchFilters, setSearchFilters] = useState<IncomeSearchSnapshot["filters"]>([]);
   const [evidenceIncome, setEvidenceIncome] = useState<Income | null>(null);
-  const { company } = useCompany();
   const { can } = usePermissions();
   const { showFeedback } = useFeedbackToast();
 
-  useEffect(() => {
-    const companyId = company?.companyId;
-    if (!companyId) {
-      setCatalogs({ methods: [], accounts: [] });
-      return;
+  const catalogs = useMemo<IncomeSearchCatalogs>(
+    () => searchState?.catalogs ?? { methods: [], accounts: [] },
+    [searchState],
+  );
+
+  const draftSnapshot = useMemo<IncomeSearchSnapshot>(
+    () => normalizeIncomeSnapshot({ q: searchText, filters: searchFilters }),
+    [searchFilters, searchText],
+  );
+
+  const executedSnapshot = useMemo<IncomeSearchSnapshot>(
+    () => normalizeIncomeSnapshot({ q: appliedSearchText, filters: searchFilters }),
+    [appliedSearchText, searchFilters],
+  );
+
+  const recentSearches = useMemo(
+    () => (searchState?.recent ?? []).map((item) => ({
+      id: item.recentId,
+      label: item.label,
+      snapshot: normalizeIncomeSnapshot(item.snapshot),
+    })),
+    [searchState],
+  );
+
+  const savedMetrics = useMemo(
+    () => (searchState?.saved ?? []).map((metric) => ({
+      id: metric.metricId,
+      name: metric.name,
+      label: metric.label,
+      snapshot: normalizeIncomeSnapshot(metric.snapshot),
+    })),
+    [searchState],
+  );
+
+  const loadSearchState = useCallback(async () => {
+    try {
+      setSearchState(await getIncomeSearchState());
+    } catch {
+      showFeedback(errorResponse("No se pudo cargar el buscador inteligente de ingresos."));
     }
-    let cancelled = false;
-    void Promise.all([getPaymentMethodsByCompany(companyId), listCompanyPaymentAccountsByCompany(companyId)])
-      .then(([methods, accounts]) => {
-        if (cancelled) return;
-        setCatalogs({
-          methods: methods.filter((method) => method.isActive !== false).map((method) => ({ id: method.methodId, label: method.name, keywords: [method.code ?? ""] })),
-          accounts: accounts.filter((account) => account.isActive !== false).map((account) => ({ id: account.id, label: account.maskedLabel || account.name, keywords: [account.bankName ?? "", account.institutionName ?? ""] })),
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setCatalogs({ methods: [], accounts: [] });
-      });
-    return () => { cancelled = true; };
-  }, [company?.companyId]);
+  }, [showFeedback]);
 
   const query = useMemo<IncomeListQuery>(() => ({
     limit: 25,
@@ -72,9 +104,9 @@ export default function IncomePage() {
     status: "ALL",
     from: range.from,
     to: range.to,
-    q: snapshot.q || undefined,
-    filters: snapshot.filters,
-  }), [page, range.from, range.to, snapshot]);
+    q: executedSnapshot.q || undefined,
+    filters: executedSnapshot.filters,
+  }), [executedSnapshot, page, range.from, range.to]);
 
   const loadIncome = useCallback(async () => {
     setLoading(true);
@@ -86,40 +118,81 @@ export default function IncomePage() {
       setRows(incomeResponse.items);
       setTotal(incomeResponse.total);
       setSummary(summaryResponse);
+      if (executedSnapshot.q || executedSnapshot.filters.length) void loadSearchState();
     } catch {
       showFeedback(errorResponse("No se pudo cargar la información de ingresos."));
     } finally {
       setLoading(false);
     }
-  }, [query, showFeedback]);
+  }, [executedSnapshot, loadSearchState, query, showFeedback]);
 
   useEffect(() => { void loadIncome(); }, [loadIncome]);
 
+  useEffect(() => { void loadSearchState(); }, [loadSearchState]);
+
   const applySnapshot = useCallback((next: Partial<IncomeSearchSnapshot>) => {
     const normalized = normalizeIncomeSnapshot(next);
-    setSnapshot(normalized);
     setSearchText(normalized.q);
+    setAppliedSearchText(normalized.q);
+    setSearchFilters(normalized.filters);
     setPage(1);
   }, []);
 
   const applyRule = useCallback((rule: IncomeSearchSnapshot["filters"][number]) => {
-    applySnapshot(upsertIncomeRule(snapshot, rule));
-  }, [applySnapshot, snapshot]);
+    const next = upsertIncomeRule(draftSnapshot, rule);
+    setSearchFilters(next.filters);
+    setPage(1);
+  }, [draftSnapshot]);
 
   const removeCriterion = useCallback((chip: { removeKey: "q" | IncomeSearchSnapshot["filters"][number]["field"] }) => {
-    if (chip.removeKey === "q") applySnapshot({ ...snapshot, q: "" });
-    else applySnapshot(removeIncomeRule(snapshot, chip.removeKey));
-  }, [applySnapshot, snapshot]);
+    if (chip.removeKey === "q") {
+      setSearchText("");
+      setAppliedSearchText("");
+    } else {
+      setSearchFilters(removeIncomeRule(draftSnapshot, chip.removeKey).filters);
+    }
+    setPage(1);
+  }, [draftSnapshot]);
 
   const setStatus = useCallback((status: "POSTED" | "VOIDED") => {
     applyRule({ field: "status", operator: "in", values: [status] });
   }, [applyRule]);
 
   const handleObservedFilter = useCallback(() => {
-    let next = upsertIncomeRule(snapshot, { field: "status", operator: "in", values: ["POSTED"] });
+    let next = upsertIncomeRule(draftSnapshot, { field: "status", operator: "in", values: ["POSTED"] });
     next = upsertIncomeRule(next, { field: "hasEvidence", operator: "in", values: ["false"] });
-    applySnapshot(next);
-  }, [applySnapshot, snapshot]);
+    setSearchFilters(next.filters);
+    setPage(1);
+  }, [draftSnapshot]);
+
+  const canSaveMetric = Boolean(draftSnapshot.q || draftSnapshot.filters.length);
+
+  const handleSaveMetric = useCallback(async (name: string) => {
+    if (!canSaveMetric || savingMetric) return false;
+
+    setSavingMetric(true);
+    try {
+      const response = await saveIncomeSearchMetric(name, draftSnapshot);
+      showFeedback(successResponse(response.message || "Metrica guardada correctamente"));
+      await loadSearchState();
+      return true;
+    } catch {
+      showFeedback(errorResponse("No se pudo guardar la metrica de ingresos."));
+      return false;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [canSaveMetric, draftSnapshot, loadSearchState, savingMetric, showFeedback]);
+
+  const handleDeleteMetric = useCallback(async (metricId: string) => {
+    try {
+      const response = await deleteIncomeSearchMetric(metricId);
+      showFeedback(successResponse(response.message || "Metrica eliminada correctamente"));
+      await loadSearchState();
+    } catch {
+      showFeedback(errorResponse("No se pudo eliminar la metrica de ingresos."));
+    }
+  }, [loadSearchState, showFeedback]);
 
   const changeRange = ({ startDate, endDate }: { startDate: Date | null; endDate: Date | null }) => {
     if (!startDate || !endDate) setRange(currentLimaMonth());
@@ -144,23 +217,35 @@ export default function IncomePage() {
     }
   }, [loadIncome, showFeedback, voiding, voidingIncome]);
 
-  const chips = useMemo(() => buildIncomeSearchChips(snapshot, catalogs), [catalogs, snapshot]);
-  const hasCriteria = Boolean(snapshot.q || snapshot.filters.length);
+  const chips = useMemo(() => buildIncomeSearchChips(executedSnapshot, catalogs), [catalogs, executedSnapshot]);
+  const hasCriteria = Boolean(executedSnapshot.q || executedSnapshot.filters.length);
   const toolbarSearchContent = (
     <DataTableSearchBar
       value={searchText}
       onChange={setSearchText}
-      onSubmitSearch={() => applySnapshot({ ...snapshot, q: searchText })}
-      searchLabel="Buscar N.º de pedido"
+      onSubmitSearch={() => {
+        setAppliedSearchText(searchText.trim());
+        setPage(1);
+      }}
+      searchLabel="Buscar ingreso..."
       searchName="income-smart-search"
-      helperText="Ej.: 534 o PE-531"
+      canSaveMetric={canSaveMetric}
+      saveLoading={savingMetric}
+      onSaveMetric={handleSaveMetric}
     >
       <IncomeSmartSearchPanel
-        snapshot={snapshot}
+        snapshot={draftSnapshot}
         catalogs={catalogs}
+        recent={recentSearches}
+        saved={savedMetrics}
+        filterQuery={searchText}
         onApplySnapshot={applySnapshot}
         onApplyRule={applyRule}
-        onRemoveRule={(field) => applySnapshot(removeIncomeRule(snapshot, field))}
+        onRemoveRule={(field) => {
+          setSearchFilters(removeIncomeRule(draftSnapshot, field).filters);
+          setPage(1);
+        }}
+        onDeleteMetric={handleDeleteMetric}
       />
     </DataTableSearchBar>
   );
