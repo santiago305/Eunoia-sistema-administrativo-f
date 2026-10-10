@@ -1,5 +1,7 @@
 import type { DataTableSearchOption, SmartSearchRule } from "@/shared/components/table/search";
 
+export type IncomeStatus = "PENDING_CONFIRMATION" | "POSTED" | "CANCELLED" | "REVERSED" | "VOIDED";
+
 export type Income = {
   incomeId: string;
   saleOrderId: string;
@@ -18,7 +20,7 @@ export type Income = {
   createdAt: string;
   evidenceUrl: string | null;
   evidence?: IncomeEvidenceSummary;
-  status?: "POSTED" | "VOIDED";
+  status?: IncomeStatus;
   voidedAt?: string | null;
   voidedByUserId?: string | null;
   voidReason?: string | null;
@@ -63,7 +65,7 @@ export type IncomeListQuery = {
   client?: string;
   q?: string;
   hasEvidence?: boolean;
-  status?: "POSTED" | "VOIDED" | "ALL";
+  status?: IncomeStatus | "ALL";
   filters?: IncomeSearchRule[];
   page?: number;
   limit?: number;

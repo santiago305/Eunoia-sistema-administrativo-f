@@ -56,7 +56,7 @@ export type SaleOrderEditorPayment = {
   photo?: File | null;
   existingPhotoUrl?: string | null;
   existingAttachmentId?: string | null;
-  status?: "DRAFT" | "POSTED" | "VOIDED";
+  status?: "PENDING_CONFIRMATION" | "POSTED" | "CANCELLED" | "REVERSED" | "DRAFT" | "VOIDED";
   voidedAt?: string | null;
   voidReason?: string | null;
 };
@@ -303,7 +303,7 @@ export function mapSaleOrderToEditorForm(
         existingPhotoUrl:
           attachment?.url ?? payment.paymentPhoto ?? null,
         existingAttachmentId: attachment?.id ?? null,
-        status: payment.status ?? "POSTED",
+        status: payment.status ?? "PENDING_CONFIRMATION",
         voidedAt: payment.voidedAt ?? null,
         voidReason: payment.voidReason ?? null,
       };

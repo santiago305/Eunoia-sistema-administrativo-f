@@ -116,7 +116,7 @@ export function SaleOrderPaymentCards({
       form.discountType,
     ).total;
     const paid = form.payments.reduce(
-      (sum, payment) => payment.status === "VOIDED" ? sum : sum + Number(payment.amount || 0),
+      (sum, payment) => payment.status === "CANCELLED" || payment.status === "REVERSED" || payment.status === "VOIDED" ? sum : sum + Number(payment.amount || 0),
       0,
     );
     const pending = Math.max(0, Number((total - paid).toFixed(2)));
@@ -137,7 +137,7 @@ export function SaleOrderPaymentCards({
   };
 
   const openEditPayment = (payment: SaleOrderEditorPayment, index: number) => {
-    if (payment.id && payment.status !== "DRAFT") {
+    if (payment.id && payment.status !== "PENDING_CONFIRMATION") {
       sileo.info({ title: "Este pago es de solo lectura. Para corregirlo, anula el ingreso y registra uno nuevo." });
       return;
     }
@@ -167,7 +167,7 @@ export function SaleOrderPaymentCards({
       (sum, payment, index) =>
         modalState.mode === "edit" && index === modalState.index
           ? sum
-          : payment.status === "VOIDED" ? sum : sum + Number(payment.amount || 0),
+          : payment.status === "CANCELLED" || payment.status === "REVERSED" || payment.status === "VOIDED" ? sum : sum + Number(payment.amount || 0),
       0,
     );
     return Math.max(0, Number((total - paidByOtherPayments).toFixed(2)));
@@ -254,7 +254,7 @@ export function SaleOrderPaymentCards({
           >
             <button
               type="button"
-              className={`flex min-h-12 flex-1 items-center justify-between gap-3 rounded-md px-2 text-left transition-colors ${payment.id && payment.status !== "DRAFT" ? "cursor-default" : "hover:bg-muted/60"}`}
+              className={`flex min-h-12 flex-1 items-center justify-between gap-3 rounded-md px-2 text-left transition-colors ${payment.id && payment.status !== "PENDING_CONFIRMATION" ? "cursor-default" : "hover:bg-muted/60"}`}
               aria-label={`${payment.date || "Sin fecha"} ${money.format(Number(payment.amount || 0))}`}
               onClick={() => openEditPayment(payment, index)}
             >
@@ -275,9 +275,9 @@ export function SaleOrderPaymentCards({
                 {money.format(Number(payment.amount || 0))}
               </span>
             </button>
-            {payment.id && payment.status !== "DRAFT" ? (
-              <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${payment.status === "VOIDED" ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
-                {payment.status === "VOIDED" ? "Anulado" : "Contabilizado"}
+            {payment.id && payment.status !== "PENDING_CONFIRMATION" ? (
+              <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${payment.status === "CANCELLED" || payment.status === "REVERSED" || payment.status === "VOIDED" ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+                {payment.status === "CANCELLED" || payment.status === "VOIDED" ? "Cancelado" : payment.status === "REVERSED" ? "Revertido" : "Contabilizado"}
               </span>
             ) : (
               <SystemButton

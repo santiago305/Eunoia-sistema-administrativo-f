@@ -489,7 +489,7 @@ export type SaleOrderPayment = {
   companyPaymentAccountId?: string | null;
   paymentMethodId?: string | null;
   currency?: string;
-  status?: "DRAFT" | "POSTED" | "VOIDED";
+  status?: "PENDING_CONFIRMATION" | "POSTED" | "CANCELLED" | "REVERSED" | "DRAFT" | "VOIDED";
   operationCode?: string | null;
   date: string;
   method: string;

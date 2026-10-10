@@ -154,7 +154,7 @@ export default function IncomePage() {
     setPage(1);
   }, [draftSnapshot]);
 
-  const setStatus = useCallback((status: "POSTED" | "VOIDED") => {
+  const setStatus = useCallback((status: "PENDING_CONFIRMATION" | "POSTED" | "CANCELLED" | "REVERSED") => {
     applyRule({ field: "status", operator: "in", values: [status] });
   }, [applyRule]);
 

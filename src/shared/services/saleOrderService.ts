@@ -629,7 +629,7 @@ export type VoidSaleOrderPaymentResponse = {
   data: {
     incomeId: string;
     saleOrderId: string;
-    status: "VOIDED";
+    status: "CANCELLED" | "REVERSED" | "VOIDED";
     amount: number;
     voidedAt: string | null;
     voidedByUserId: string | null;

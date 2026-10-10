@@ -507,7 +507,9 @@ export function SaleOrderEditor({
   const totalPaid = useMemo(
     () =>
       form.payments.reduce(
-        (sum, payment) => payment.status === "VOIDED" ? sum : sum + Number(payment.amount || 0),
+        (sum, payment) => payment.status === "CANCELLED" || payment.status === "REVERSED" || payment.status === "VOIDED"
+          ? sum
+          : sum + Number(payment.amount || 0),
         0,
       ),
     [form.payments],

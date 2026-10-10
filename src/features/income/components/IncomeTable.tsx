@@ -152,7 +152,7 @@ export function IncomeTable({
         id: "status",
         header: "Estado",
         hideable: false,
-        cell: (row) => row.status === "VOIDED" ? (
+        cell: (row) => row.status === "CANCELLED" || row.status === "REVERSED" || row.status === "VOIDED" ? (
           <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">Anulado</span>
         ) : (
           <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">Contabilizado</span>
@@ -173,7 +173,7 @@ export function IncomeTable({
         headerClassName: "text-center [&>div]:justify-center",
         cell: (row) => {
           const available = Boolean(row.evidence?.available || row.evidence?.status === "AVAILABLE" || row.evidenceUrl);
-          const canOpen = available ? canViewEvidence : canAttachEvidence && row.status !== "VOIDED";
+          const canOpen = available ? canViewEvidence : canAttachEvidence && row.status === "PENDING_CONFIRMATION";
           const Icon = available ? (canViewEvidence ? Image : ImageOff) : canOpen ? ImagePlus : ImageOff;
           const label = available
             ? (canViewEvidence ? "Ver evidencia del ingreso" : "Evidencia disponible; permiso requerido")

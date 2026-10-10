@@ -19,8 +19,10 @@ export function buildIncomeSmartSearchColumns(catalogs: IncomeSearchCatalogs = {
       label: "Estado",
       kind: "catalog",
       options: [
+        { id: "PENDING_CONFIRMATION", label: "Por confirmar" },
         { id: "POSTED", label: "Contabilizado" },
-        { id: "VOIDED", label: "Anulado" },
+        { id: "CANCELLED", label: "Cancelado" },
+        { id: "REVERSED", label: "Revertido" },
       ],
       operators: CATALOG_OPERATORS,
     },

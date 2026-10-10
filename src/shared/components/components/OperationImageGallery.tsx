@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { env } from "@/env";
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 
@@ -92,6 +92,24 @@ export function OperationImageGallery({
             className="h-full w-full object-cover"
           />
         </button>
+
+        {canUpload ? (
+          <label
+            className="absolute right-2 top-2 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-slate-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 focus-within:outline-none focus-within:ring-2 focus-within:ring-red-500/40"
+            title="Cambiar imagen"
+          >
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+            <span className="sr-only">Cambiar imagen</span>
+            <input
+              type="file"
+              accept="image/*"
+              disabled={uploading}
+              aria-label="Cambiar imagen"
+              onChange={(e) => void onUpload?.(e.target.files?.[0] ?? null)}
+              className="sr-only"
+            />
+          </label>
+        ) : null}
 
         {hasMultipleImages ? (
           <>

@@ -12,6 +12,10 @@ ARG VITE_API_BASE_URL=http://localhost:3000/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN pnpm run build
 
+FROM build AS test
+ENV NODE_ENV=test
+CMD ["pnpm", "run", "test:unit", "--", "--runInBand"]
+
 FROM nginx:1.27-alpine AS runner
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html

@@ -1,6 +1,5 @@
 import axiosInstance from "@/shared/common/utils/axios";
 import { API_INCOME_GROUP } from "@/shared/services/APIs";
-import { env } from "@/env";
 import type {
   IncomeEvidenceSummary,
   IncomeListQuery,
@@ -47,7 +46,19 @@ export const deleteIncomeSearchMetric = async (
 
 export const getIncomeEvidence = async (incomeId: string): Promise<IncomeEvidenceSummary & { incomeId: string; saleOrderId: string; saleOrderPaymentId: string }> => {
   const response = await axiosInstance.get(API_INCOME_GROUP.evidence(incomeId));
-  return response.data?.url ? { ...response.data, url: `${env.apiBaseUrl}${API_INCOME_GROUP.evidenceContent(incomeId)}` } : response.data;
+  return response.data;
+};
+
+/**
+ * Evidence is private and requires the authenticated axios client. Returning
+ * a blob URL avoids a direct browser request to the API, which is rejected by
+ * the browser's cross-origin resource policy in production.
+ */
+export const getIncomeEvidenceContent = async (incomeId: string): Promise<string> => {
+  const response = await axiosInstance.get<Blob>(API_INCOME_GROUP.evidenceContent(incomeId), {
+    responseType: "blob",
+  });
+  return URL.createObjectURL(response.data);
 };
 
 export const uploadIncomeEvidence = async (incomeId: string, file: File) => {
