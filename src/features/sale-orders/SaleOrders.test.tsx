@@ -233,6 +233,29 @@ describe("SaleOrders", () => {
     expect(getSaleOrderStatisticsMock).not.toHaveBeenCalled();
   });
 
+  it("distinguishes received, applied, pending, and available excess in order amounts", async () => {
+    listSaleOrdersMock.mockResolvedValue({
+      items: [{
+        ...buildSaleOrder("Pendiente"),
+        totalReceived: 100,
+        totalApplied: 80,
+        totalPaid: 80,
+        pendingAmount: 20,
+        customerCreditAvailable: 15,
+      }],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(<TooltipProvider><SaleOrders /></TooltipProvider>);
+
+    expect(await screen.findByText("Recibido:")).toBeInTheDocument();
+    expect(screen.getByText("Aplicado:")).toBeInTheDocument();
+    expect(screen.getByText("Debe:")).toBeInTheDocument();
+    expect(screen.getByText("Excedente:")).toBeInTheDocument();
+  });
+
   it("does not render inactive sale orders returned by the API", async () => {
     listSaleOrdersMock.mockResolvedValue({
       items: [

@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PaymentListModal } from "./PaymentListModal";
 
+vi.mock("@/env", () => ({ env: { apiBaseUrl: "http://localhost:3000/api" } }));
+
 const {
   listPaymentsMock,
   listPurchaseAttachmentsMock,

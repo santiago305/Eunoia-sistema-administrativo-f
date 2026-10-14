@@ -14,7 +14,7 @@ RUN pnpm run build
 
 FROM build AS test
 ENV NODE_ENV=test
-CMD ["pnpm", "run", "test:unit", "--", "--runInBand"]
+CMD ["pnpm", "exec", "vitest", "run"]
 
 FROM nginx:1.27-alpine AS runner
 COPY nginx.conf /etc/nginx/conf.d/default.conf

@@ -1,4 +1,4 @@
-import { KeyRound, Power, RotateCcw, ShieldCheck } from "lucide-react";
+import { Building2, KeyRound, Power, RotateCcw, ShieldCheck } from "lucide-react";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { cn, getInitials, getRoleLabel, roleTone } from "./usersPage.helpers";
 import type { User } from "../types/users.types";
@@ -11,8 +11,10 @@ type UserProfileHeaderProps = {
   togglingStatus: boolean;
   selectedCanManageGrantablePermissions: boolean;
   actorCanManageGrantablePermissions: boolean;
+  canManageIncomeScopes: boolean;
   onOpenPermissions: () => void;
   onOpenGrantablePermissions: () => void;
+  onOpenIncomeScopes: () => void;
   onDeactivate: () => void;
   onRestore: () => void;
 };
@@ -25,8 +27,10 @@ export function UserProfileHeader({
   togglingStatus,
   selectedCanManageGrantablePermissions,
   actorCanManageGrantablePermissions,
+  canManageIncomeScopes,
   onOpenPermissions,
   onOpenGrantablePermissions,
+  onOpenIncomeScopes,
   onDeactivate,
   onRestore,
 }: UserProfileHeaderProps) {
@@ -59,6 +63,12 @@ export function UserProfileHeader({
         <SystemButton variant="secondary" leftIcon={<KeyRound className="h-4 w-4" />} onClick={onOpenPermissions}>
           Permisos
         </SystemButton>
+
+        {canManageIncomeScopes ? (
+          <SystemButton variant="outline" leftIcon={<Building2 className="h-4 w-4" />} onClick={onOpenIncomeScopes}>
+            Alcance de ingresos
+          </SystemButton>
+        ) : null}
 
         {selectedCanManageGrantablePermissions ? (
           <SystemButton

@@ -96,6 +96,13 @@ describe("saleOrderEditorForm", () => {
     );
   });
 
+  it("preserves an absent persisted payment status instead of inferring it is pending", () => {
+    const form = mapSaleOrderToEditorForm(order);
+
+    expect(form.payments[0]).toEqual(expect.objectContaining({ id: "payment-1" }));
+    expect(form.payments[0].status).toBeUndefined();
+  });
+
   it("accepts semantic sale payment and shipping proof attachment types", () => {
     const form = mapSaleOrderToEditorForm({
       ...order,

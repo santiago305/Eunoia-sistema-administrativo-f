@@ -41,15 +41,8 @@ const PERIODS: Array<{ value: AdviserAnalyticsMonths; label: string }> = [
   { value: 12, label: "12 meses" },
 ];
 
-const money = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  maximumFractionDigits: 0,
-});
-const compactMoney = new Intl.NumberFormat("es-CO", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
+const money = (value: number, currency: string) => new Intl.NumberFormat("es-PE", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
+const compactMoney = (value: number, currency: string) => new Intl.NumberFormat("es-PE", { style: "currency", currency, notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
 const monthFormatter = new Intl.DateTimeFormat("es-CO", {
   month: "short",
   year: "2-digit",
@@ -82,6 +75,7 @@ const trendContent = {
 export function AdviserPerformanceModal({ open, adviser, onClose }: Props) {
   const [months, setMonths] = useState<AdviserAnalyticsMonths>(6);
   const [analytics, setAnalytics] = useState<AdviserAnalyticsResponse | null>(null);
+  const [currency, setCurrency] = useState("PEN");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
@@ -116,13 +110,16 @@ export function AdviserPerformanceModal({ open, adviser, onClose }: Props) {
     };
   }, [adviser, months, open, retryToken]);
 
+  const selectedCurrency = analytics?.currencies.includes(currency)
+    ? currency
+    : analytics?.currencies[0] ?? currency;
   const data = useMemo<ChartPoint[]>(
     () =>
-      (analytics?.items ?? []).map((item) => ({
+      (analytics?.items ?? []).filter((item) => item.currency === selectedCurrency).map((item) => ({
         ...item,
         monthLabel: monthLabel(item.monthKey),
       })),
-    [analytics],
+    [analytics, selectedCurrency],
   );
   const hasActivity = data.some(
     (item) => item.orders > 0 || item.soldTotal > 0 || item.collectedTotal > 0,
@@ -169,6 +166,14 @@ export function AdviserPerformanceModal({ open, adviser, onClose }: Props) {
               </SystemButton>
             ))}
           </div>
+          {analytics?.currencies.length ? (
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              Moneda
+              <select className="h-11 rounded-lg border border-border bg-background px-3" value={selectedCurrency} onChange={(event) => setCurrency(event.target.value)}>
+                {analytics.currencies.map((code) => <option key={code} value={code}>{code}</option>)}
+              </select>
+            </label>
+          ) : null}
         </div>
 
         {error ? (
@@ -194,10 +199,10 @@ export function AdviserPerformanceModal({ open, adviser, onClose }: Props) {
               </div>
             ) : (
               <>
-                <PerformanceChart data={data} analytics={analytics} loading={loading} />
+                <PerformanceChart data={data} trend={analytics.trends[selectedCurrency]} loading={loading} />
                 <div className="grid gap-4 lg:grid-cols-2">
                   <OrdersChart data={data} />
-                  <FinancialChart data={data} />
+                  <FinancialChart data={data} currency={selectedCurrency} />
                 </div>
                 <MonthlyTable data={data} />
               </>
@@ -211,14 +216,14 @@ export function AdviserPerformanceModal({ open, adviser, onClose }: Props) {
 
 function PerformanceChart({
   data,
-  analytics,
+  trend: selectedTrend,
   loading,
 }: {
   data: ChartPoint[];
-  analytics: AdviserAnalyticsResponse;
+  trend: AdviserAnalyticsResponse["trends"][string] | undefined;
   loading: boolean;
 }) {
-  const trend = trendContent[analytics.trend.direction];
+  const trend = trendContent[selectedTrend?.direction ?? "stable"];
   const TrendIcon = trend.Icon;
 
   return (
@@ -236,10 +241,10 @@ function PerformanceChart({
           {loading ? <span className="text-xs text-muted-foreground">Actualizando…</span> : null}
           <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${trend.className}`}>
             <TrendIcon className="h-4 w-4" aria-hidden="true" />
-            {trend.label} {Math.abs(analytics.trend.delta)} puntos
+            {trend.label} {Math.abs(selectedTrend?.delta ?? 0)} puntos
           </span>
           <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-            Actual: {analytics.trend.current}/100
+            Actual: {selectedTrend?.current ?? 0}/100
           </span>
         </div>
       </div>
@@ -285,14 +290,14 @@ function OrdersChart({ data }: { data: ChartPoint[] }) {
   );
 }
 
-function FinancialChart({ data }: { data: ChartPoint[] }) {
+function FinancialChart({ data, currency }: { data: ChartPoint[]; currency: string }) {
   return (
     <ChartCard title="Vendido frente a recaudado" description="Evolución mensual de los importes del asesor.">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
           <XAxis dataKey="monthLabel" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-          <YAxis width={54} tickFormatter={(value) => compactMoney.format(Number(value))} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+          <YAxis width={74} tickFormatter={(value) => compactMoney(Number(value), currency)} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
           <Tooltip content={<FinancialTooltip />} />
           <Line type="monotone" dataKey="soldTotal" name="Vendido" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive={false} />
           <Line type="monotone" dataKey="collectedTotal" name="Recaudado" stroke="hsl(var(--success))" strokeWidth={2.5} strokeDasharray="6 4" dot={{ r: 3 }} isAnimationActive={false} />
@@ -341,8 +346,8 @@ function MonthlyTable({ data }: { data: ChartPoint[] }) {
                 <td className="whitespace-nowrap px-4 py-3 font-medium text-foreground">{item.monthLabel}</td>
                 <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">{item.performanceScore}/100</td>
                 <td className="px-4 py-3 text-right tabular-nums text-foreground">{item.orders}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-foreground">{money.format(item.soldTotal)}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-foreground">{money.format(item.collectedTotal)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-foreground">{money(item.soldTotal, item.currency)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-foreground">{money(item.collectedTotal, item.currency)}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-foreground">{item.collectionRate.toFixed(1)}%</td>
               </tr>
             ))}
@@ -370,7 +375,7 @@ function OrdersTooltip({ active, payload }: { active?: boolean; payload?: Toolti
 function FinancialTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload }) {
   const item = payload?.[0]?.payload;
   if (!active || !item) return null;
-  return <ChartTooltipShell item={item}><TooltipRow label="Vendido" value={money.format(item.soldTotal)} /><TooltipRow label="Recaudado" value={money.format(item.collectedTotal)} /></ChartTooltipShell>;
+  return <ChartTooltipShell item={item}><TooltipRow label="Vendido" value={money(item.soldTotal, item.currency)} /><TooltipRow label="Recaudado" value={money(item.collectedTotal, item.currency)} /></ChartTooltipShell>;
 }
 
 function ChartTooltipShell({ item, children }: { item: ChartPoint; children: ReactNode }) {

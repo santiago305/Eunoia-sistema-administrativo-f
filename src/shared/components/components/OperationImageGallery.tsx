@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { env } from "@/env";
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
@@ -42,7 +42,7 @@ export function OperationImageGallery({
   const hasMultipleImages = normalizedImages.length > 1;
   const activeImage = normalizedImages[activeImageIndex] ?? normalizedImages[0];
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setActiveImageIndex(0);
     setPreviewImageIndex(null);
   }, [images.length]);

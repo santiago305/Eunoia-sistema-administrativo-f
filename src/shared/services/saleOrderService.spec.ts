@@ -3,6 +3,7 @@ import axiosInstance from "@/shared/common/utils/axios";
 import {
   getSaleOrderEditorCatalogs,
   matchSaleOrderProductPack,
+  previewCorrectSaleOrderTotal,
 } from "./saleOrderService";
 
 vi.mock("@/shared/common/utils/axios", () => ({
@@ -72,5 +73,18 @@ describe("saleOrderService", () => {
       "/sale-orders/products/match-pack",
       { components },
     );
+  });
+
+  it("previews a corrected total through the read-only financial analysis endpoint", async () => {
+    const preview = {
+      saleOrderId: "order-1", currency: "USD" as const, currentTotal: 100, correctedTotal: 70,
+      appliedAmount: 100, pendingAmount: 0, customerCreditCreated: 30,
+      releasedByIncome: [{ paymentId: "payment-1", currency: "USD" as const, amount: 30 }],
+      previewToken: "a".repeat(64),
+    };
+    vi.mocked(axiosInstance.post).mockResolvedValueOnce({ data: preview });
+
+    await expect(previewCorrectSaleOrderTotal("order-1", 70)).resolves.toEqual(preview);
+    expect(axiosInstance.post).toHaveBeenCalledWith("/sale-orders/order-1/correct-total/preview", { total: 70 });
   });
 });

@@ -7,6 +7,7 @@ import type {
 import { UserForm } from "./formUser";
 import { UserGrantablePermissionsModal } from "./UserGrantablePermissionsModal";
 import { UserPermissionsModal } from "./UserPermissionsModal";
+import { UserIncomeScopesModal } from "./UserIncomeScopesModal";
 import type { User } from "../types/users.types";
 
 type UsersPageModalsProps = {
@@ -44,6 +45,9 @@ type UsersPageModalsProps = {
   canCreateUsers: boolean;
   onCloseCreateModal: () => void;
   onCreated: () => void;
+  incomeScopesOpen: boolean;
+  onCloseIncomeScopes: () => void;
+  onIncomeScopesSaved: () => void;
 };
 
 export function UsersPageModals({
@@ -77,6 +81,9 @@ export function UsersPageModals({
   canCreateUsers,
   onCloseCreateModal,
   onCreated,
+  incomeScopesOpen,
+  onCloseIncomeScopes,
+  onIncomeScopesSaved,
 }: UsersPageModalsProps) {
   return (
     <>
@@ -112,6 +119,13 @@ export function UsersPageModals({
         saving={savingGrantablePermissions}
         canAssignWildcard={canAssignWildcard}
         onSave={onSaveGrantablePermissions}
+      />
+
+      <UserIncomeScopesModal
+        open={incomeScopesOpen}
+        user={selected}
+        onClose={onCloseIncomeScopes}
+        onSaved={onIncomeScopesSaved}
       />
 
       <Modal

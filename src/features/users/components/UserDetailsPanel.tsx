@@ -27,8 +27,10 @@ type UserDetailsPanelProps = {
   savingMailStorageQuota: boolean;
   selectedCanManageGrantablePermissions: boolean;
   actorCanManageGrantablePermissions: boolean;
+  canManageIncomeScopes: boolean;
   onOpenPermissions: () => void;
   onOpenGrantablePermissions: () => void;
+  onOpenIncomeScopes: () => void;
   onDeactivate: () => void;
   onRestore: () => void;
   onRoleDraftChange: (role: Role) => void;
@@ -58,8 +60,10 @@ export function UserDetailsPanel({
   savingMailStorageQuota,
   selectedCanManageGrantablePermissions,
   actorCanManageGrantablePermissions,
+  canManageIncomeScopes,
   onOpenPermissions,
   onOpenGrantablePermissions,
+  onOpenIncomeScopes,
   onDeactivate,
   onRestore,
   onRoleDraftChange,
@@ -91,8 +95,10 @@ export function UserDetailsPanel({
         togglingStatus={togglingStatus}
         selectedCanManageGrantablePermissions={selectedCanManageGrantablePermissions}
         actorCanManageGrantablePermissions={actorCanManageGrantablePermissions}
+        canManageIncomeScopes={canManageIncomeScopes}
         onOpenPermissions={onOpenPermissions}
         onOpenGrantablePermissions={onOpenGrantablePermissions}
+        onOpenIncomeScopes={onOpenIncomeScopes}
         onDeactivate={onDeactivate}
         onRestore={onRestore}
       />

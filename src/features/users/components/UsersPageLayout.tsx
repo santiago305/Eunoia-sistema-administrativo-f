@@ -44,8 +44,10 @@ type UsersPageLayoutProps = {
   savingMailStorageQuota: boolean;
   selectedCanManageGrantablePermissions: boolean;
   actorCanManageGrantablePermissions: boolean;
+  canManageIncomeScopes: boolean;
   onOpenPermissions: () => void;
   onOpenGrantablePermissions: () => void;
+  onOpenIncomeScopes: () => void;
   onDeactivate: () => void;
   onRestore: () => void;
   onRoleDraftChange: (role: Role) => void;
@@ -95,8 +97,10 @@ export function UsersPageLayout({
   savingMailStorageQuota,
   selectedCanManageGrantablePermissions,
   actorCanManageGrantablePermissions,
+  canManageIncomeScopes,
   onOpenPermissions,
   onOpenGrantablePermissions,
+  onOpenIncomeScopes,
   onDeactivate,
   onRestore,
   onRoleDraftChange,
@@ -156,8 +160,10 @@ export function UsersPageLayout({
               savingMailStorageQuota={savingMailStorageQuota}
               selectedCanManageGrantablePermissions={selectedCanManageGrantablePermissions}
               actorCanManageGrantablePermissions={actorCanManageGrantablePermissions}
+              canManageIncomeScopes={canManageIncomeScopes}
               onOpenPermissions={onOpenPermissions}
               onOpenGrantablePermissions={onOpenGrantablePermissions}
+              onOpenIncomeScopes={onOpenIncomeScopes}
               onDeactivate={onDeactivate}
               onRestore={onRestore}
               onRoleDraftChange={onRoleDraftChange}

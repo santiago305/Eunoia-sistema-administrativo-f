@@ -1052,6 +1052,31 @@ describe("SaleOrderEditor catalog loading", () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith("order-99"));
   });
 
+  it("reuses the same idempotency key when a save response is lost and the unchanged form is retried", async () => {
+    saveSaleOrderWithClientMock
+      .mockRejectedValueOnce(new Error("socket lost after commit"))
+      .mockResolvedValueOnce({ orderId: "order-100", serie: "SO", correlative: 100 });
+    render(<EditorHarness />);
+
+    await waitFor(() => expect(getSaleOrderEditorCatalogsMock).toHaveBeenCalledWith("company-1"));
+    fireEvent.click(screen.getByRole("button", { name: "preparar pedido valido" }));
+    const saveButton = await screen.findByRole("button", { name: "Crear pedido" });
+    await waitFor(() => expect(saveButton).not.toBeDisabled());
+
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(saveSaleOrderWithClientMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(sileoErrorMock).toHaveBeenCalled());
+    await waitFor(() => expect(saveButton).not.toBeDisabled());
+
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(saveSaleOrderWithClientMock).toHaveBeenCalledTimes(2));
+    const firstKey = saveSaleOrderWithClientMock.mock.calls[0][3];
+    const retryKey = saveSaleOrderWithClientMock.mock.calls[1][3];
+    expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(retryKey).toBe(firstKey);
+    expect(saveSaleOrderWithClientMock.mock.calls[1][0]).toEqual(saveSaleOrderWithClientMock.mock.calls[0][0]);
+  });
+
   it("adds a direct SKU item from the Packs header without pack references", async () => {
     render(<EditorHarness />);
 

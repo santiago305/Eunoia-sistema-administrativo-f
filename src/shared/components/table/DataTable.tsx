@@ -136,6 +136,11 @@ export function DataTable<T extends Record<string, unknown>>({
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyOperationRef = useRef(0);
 
+  useEffect(() => () => {
+    copyOperationRef.current += 1;
+    if (copyFeedbackTimerRef.current) clearTimeout(copyFeedbackTimerRef.current);
+  }, []);
+
   const sort = controlledSort !== undefined ? controlledSort : internalSort;
   const activeSelectedRowKeys = selectedRowKeys ?? internalSelectedRowKeys;
 

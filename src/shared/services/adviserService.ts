@@ -8,9 +8,11 @@ export type AdviserOption = {
   email: string;
   isActive?: boolean;
   assignedOrders?: number;
-  soldTotal?: number;
-  collectedTotal?: number;
+  soldTotal?: number | null;
+  collectedTotal?: number | null;
+  currencyMetrics?: AdviserCurrencyMetric[];
 };
+export type AdviserCurrencyMetric = { currency: string; soldTotal: number; collectedTotal: number };
 
 export type AdviserPeriod = { startDate: string; endDate: string };
 export type AdviserSummaryResponse = { items: AdviserOption[]; total: number; page: number; limit: number; totalPages: number; period: AdviserPeriod };
@@ -21,7 +23,9 @@ export type AdviserOrderListItem = {
   createdAt: string;
   clientName: string;
   total: number;
+  currency: string;
   collectedTotal: number;
+  collectedByCurrency: Array<{ currency: string; amount: number }>;
   stateName: string;
   stateColor: string | null;
 };
@@ -29,6 +33,7 @@ export type AdviserOrdersResponse = { items: AdviserOrderListItem[]; total: numb
 export type AdviserAnalyticsMonths = 3 | 6 | 12;
 export type AdviserMonthlyAnalytics = {
   monthKey: string;
+  currency: string;
   orders: number;
   soldTotal: number;
   collectedTotal: number;
@@ -38,13 +43,14 @@ export type AdviserMonthlyAnalytics = {
 export type AdviserAnalyticsResponse = {
   months: AdviserAnalyticsMonths;
   period: AdviserPeriod;
+  currencies: string[];
   items: AdviserMonthlyAnalytics[];
-  trend: {
+  trends: Record<string, {
     current: number;
     previous: number;
     delta: number;
     direction: "improved" | "worsened" | "stable";
-  };
+  }>;
 };
 
 export const listAdvisers = async (): Promise<AdviserOption[]> => {

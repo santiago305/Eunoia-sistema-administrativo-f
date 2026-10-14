@@ -1255,12 +1255,20 @@ export default function SaleOrders() {
                             <span className="font-medium tabular-nums text-zinc-800">{formatMoney(order.total)}</span>
                         </p>
                         <p className="flex justify-between gap-2 whitespace-nowrap">
-                            <span className="text-zinc-500">Pagado:</span>
-                            <span className="font-medium tabular-nums text-emerald-700">{formatMoney(order.totalPaid)}</span>
+                            <span className="text-zinc-500">Recibido:</span>
+                            <span className="font-medium tabular-nums text-emerald-700">{formatMoney(order.totalReceived ?? order.totalPaid)}</span>
+                        </p>
+                        <p className="flex justify-between gap-2 whitespace-nowrap">
+                            <span className="text-zinc-500">Aplicado:</span>
+                            <span className="font-medium tabular-nums text-emerald-700">{formatMoney(order.totalApplied ?? order.totalPaid)}</span>
                         </p>
                         <p className="flex justify-between gap-2 whitespace-nowrap">
                             <span className="text-zinc-500">Debe:</span>
                             <span className={`font-medium tabular-nums ${Number(order.pendingAmount ?? 0) > 0 ? "text-rose-600" : "text-emerald-700"}`}>{formatMoney(order.pendingAmount)}</span>
+                        </p>
+                        <p className="flex justify-between gap-2 whitespace-nowrap">
+                            <span className="text-zinc-500">Excedente:</span>
+                            <span className="font-medium tabular-nums text-sky-700">{formatMoney(order.customerCreditAvailable ?? 0)}</span>
                         </p>
                     </div>
                 ),

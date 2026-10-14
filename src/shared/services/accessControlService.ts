@@ -1,5 +1,6 @@
 import axiosInstance from "@/shared/common/utils/axios";
 import { API_ACCESS_CONTROL_GROUP } from "./APIs";
+import { API_INCOME_GROUP } from "./APIs";
 
 export type PermissionEffect = "ALLOW" | "DENY";
 
@@ -37,6 +38,21 @@ export type UserGrantablePermissionsResponse = {
   userId: string;
   permissionCodes: string[];
 };
+
+export type IncomeScopeAssignment = { type: "SUBSIDIARY" | "PAYMENT_ACCOUNT" | "CLIENT"; id: string };
+export type IncomeScopeOption = { id: string; label: string };
+export type IncomeScopeOptions = { subsidiaries: IncomeScopeOption[]; clients: IncomeScopeOption[]; paymentAccounts: IncomeScopeOption[] };
+
+export const getIncomeScopeOptions = async () =>
+  (await axiosInstance.get<IncomeScopeOptions>(API_INCOME_GROUP.dataScopeOptions)).data;
+
+export const getUserIncomeScopes = async (userId: string) =>
+  (await axiosInstance.get<IncomeScopeAssignment[]>(API_INCOME_GROUP.userDataScope(userId))).data;
+
+export const replaceUserIncomeScopes = async (userId: string, assignments: IncomeScopeAssignment[]) =>
+  (await axiosInstance.patch<{ userId: string; assignments: IncomeScopeAssignment[] }>(
+    API_INCOME_GROUP.userDataScope(userId), { assignments },
+  )).data;
 
 export const getEffectivePermissionsDetailByUser = async (id: string) => {
   const response = await axiosInstance.get<EffectivePermissionsDetailResponse>(

@@ -84,6 +84,7 @@ export default function Users() {
   const [managementRoleScopeDraft, setManagementRoleScopeDraft] = useState<string[]>([]);
   const [managementUserScopeDraft, setManagementUserScopeDraft] = useState<string[]>([]);
   const [savingManagementScope, setSavingManagementScope] = useState(false);
+  const [incomeScopesOpen, setIncomeScopesOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -647,8 +648,10 @@ export default function Users() {
       savingMailStorageQuota={savingMailStorageQuota}
       selectedCanManageGrantablePermissions={selectedCanManageGrantablePermissions}
       actorCanManageGrantablePermissions={actorCanManageGrantablePermissions}
+      canManageIncomeScopes={can("income.scope.manage")}
       onOpenPermissions={() => setPermissionsOpen(true)}
       onOpenGrantablePermissions={() => void openGrantablePermissionsModal()}
+      onOpenIncomeScopes={() => setIncomeScopesOpen(true)}
       onDeactivate={() => void deactivateUser()}
       onRestore={() => void restoreUser()}
       onRoleDraftChange={setRoleDraft}
@@ -688,6 +691,9 @@ export default function Users() {
           canCreateUsers={can("users.create")}
           onCloseCreateModal={() => setModalOpen(false)}
           onCreated={() => setReloadTick((prev) => prev + 1)}
+          incomeScopesOpen={incomeScopesOpen}
+          onCloseIncomeScopes={() => setIncomeScopesOpen(false)}
+          onIncomeScopesSaved={() => showFeedback(successResponse("Alcance financiero actualizado."))}
         />
       }
     />

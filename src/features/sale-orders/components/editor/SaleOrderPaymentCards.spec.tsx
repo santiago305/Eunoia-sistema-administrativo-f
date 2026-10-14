@@ -8,14 +8,29 @@ import {
   type SaleOrderEditorForm,
 } from "./saleOrderEditorForm";
 
-const { sileoError } = vi.hoisted(() => ({
+const { sileoError, permissions, getRevisions, getRevisionContent } = vi.hoisted(() => ({
   sileoError: vi.fn(),
+  permissions: ["*"],
+  getRevisions: vi.fn().mockResolvedValue([]),
+  getRevisionContent: vi.fn(),
 }));
 
 vi.mock("sileo", () => ({
   sileo: {
     error: sileoError,
   },
+}));
+
+vi.mock("@/shared/hooks/usePermissions", () => ({ usePermissions: () => ({
+  can: (permission: string) => permissions.includes("*") || permissions.includes(permission),
+  canAll: (required: string[]) => required.every((permission) => permissions.includes("*") || permissions.includes(permission)),
+  canAny: (required: string[]) => required.some((permission) => permissions.includes("*") || permissions.includes(permission)),
+}) }));
+
+vi.mock("@/shared/services/incomeService", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/services/incomeService")>()),
+  getIncomeEvidenceRevisions: getRevisions,
+  getIncomeEvidenceRevisionContent: getRevisionContent,
 }));
 
 vi.mock("../useSaleOrderPaymentOptions", () => ({
@@ -60,7 +75,7 @@ vi.mock(
   }),
 );
 
-function PaymentHarness() {
+function PaymentHarness({ persistedPayment = false, persistedStatus = "PENDING_CONFIRMATION" }: { persistedPayment?: boolean; persistedStatus?: SaleOrderEditorForm["payments"][number]["status"] | null }) {
   const [form, setForm] = useState<SaleOrderEditorForm>(() => ({
     ...buildEmptySaleOrderEditorForm(),
     items: [
@@ -70,6 +85,7 @@ function PaymentHarness() {
     ],
     payments: [
       {
+        ...(persistedPayment ? { id: "income-1", version: 1, ...(persistedStatus ? { status: persistedStatus } : {}) } : {}),
         clientKey: "payment-1",
         bankAccountId: "account-1",
         method: "EFECTIVO",
@@ -91,6 +107,59 @@ function PaymentHarness() {
 }
 
 describe("SaleOrderPaymentCards", () => {
+  it("shows evidence history only when financial read, audit, evidence and scope permissions are present", async () => {
+    permissions.splice(0, permissions.length, "income.read", "income.audit.view", "payments.view_evidence", "income.view_own");
+    getRevisions.mockResolvedValueOnce([]);
+    const { unmount } = render(<PaymentHarness persistedPayment />);
+    await userEvent.setup().click(screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }));
+    await waitFor(() => expect(getRevisions).toHaveBeenCalledWith("income-1", 50));
+    expect(screen.getByText("Historial de evidencias")).toBeInTheDocument();
+    unmount();
+
+    permissions.splice(0, permissions.length, "income.read", "payments.view_evidence", "income.view_own");
+    getRevisions.mockClear();
+    render(<PaymentHarness persistedPayment />);
+    await userEvent.setup().click(screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }));
+    expect(screen.queryByText("Historial de evidencias")).not.toBeInTheDocument();
+    expect(getRevisions).not.toHaveBeenCalled();
+    permissions.splice(0, permissions.length, "*");
+  });
+
+  it("keeps a persisted pending income in history and directs cancellation to Ingresos", () => {
+    render(<PaymentHarness persistedPayment />);
+
+    expect(screen.getByText("Por confirmar · cancela en Ingresos")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Quitar" })).not.toBeInTheDocument();
+  });
+
+  it("fails closed for a persisted payment without a known lifecycle state", async () => {
+    const user = userEvent.setup();
+    getRevisions.mockResolvedValue([]);
+    render(<PaymentHarness persistedPayment persistedStatus={null} />);
+
+    expect(screen.getByText("Estado desconocido")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }));
+    expect(screen.getByRole("dialog", { name: "Detalle del ingreso (estado desconocido)" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Monto")).toHaveAttribute("readonly", "");
+    expect(screen.queryByRole("button", { name: "Guardar cambios" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Subir imagen")).not.toBeInTheDocument();
+  });
+
+  it("keeps legacy VOIDED visible as unknown, read-only, and reserved against new payments", async () => {
+    const user = userEvent.setup();
+    getRevisions.mockResolvedValue([]);
+    render(<PaymentHarness persistedPayment persistedStatus="VOIDED" />);
+
+    expect(screen.getByText("Estado desconocido")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }));
+    expect(screen.getByRole("dialog", { name: "Detalle del ingreso (estado desconocido)" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Monto")).toHaveAttribute("readonly", "");
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    await user.click(screen.getByRole("button", { name: "Agregar Pago" }));
+    expect(screen.getByLabelText("Monto")).toHaveValue(90);
+  });
+
   it("creates and edits payments through a modal with all payment fields", async () => {
     const user = userEvent.setup();
     render(<PaymentHarness />);
@@ -104,7 +173,7 @@ describe("SaleOrderPaymentCards", () => {
       screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }),
     );
     expect(
-      screen.getByRole("dialog", { name: "Detalle de pago" }),
+      screen.getByRole("dialog", { name: "Modificar pago" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Monto")).toHaveValue(10);
     expect(screen.getByLabelText("Operacion")).toBeInTheDocument();
@@ -127,7 +196,7 @@ describe("SaleOrderPaymentCards", () => {
     );
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Detalle de pago" }),
+        screen.queryByRole("dialog", { name: "Modificar pago" }),
       ).not.toBeInTheDocument(),
     );
 
@@ -170,7 +239,7 @@ describe("SaleOrderPaymentCards", () => {
       title: "El monto no puede superar el saldo disponible de S/ 100.00.",
     });
     expect(screen.getByText(/El monto no puede superar el saldo disponible/)).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Detalle de pago" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Modificar pago" })).toBeInTheDocument();
     expect(screen.getByTestId("payment-state")).toHaveTextContent('"amount":10');
   });
 });

@@ -11,6 +11,7 @@ type Props = {
   loading?: boolean;
   onClose: () => void;
   onConfirm: (reason: string) => void;
+  action?: "cancel" | "reverse";
 };
 
 const money = (value: number) =>
@@ -23,7 +24,7 @@ const QUICK_REASONS = [
   "Operación inexistente",
 ];
 
-export function VoidIncomeModal({ open, income, loading = false, onClose, onConfirm }: Props) {
+export function VoidIncomeModal({ open, income, loading = false, onClose, onConfirm, action = "reverse" }: Props) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const reasonRef = useRef<HTMLTextAreaElement | null>(null);
@@ -54,8 +55,8 @@ export function VoidIncomeModal({ open, income, loading = false, onClose, onConf
     <Modal
       open={open}
       onClose={onClose}
-      title="Anular ingreso"
-      description="La operación no puede deshacerse y el saldo del pedido será recalculado."
+      title={action === "cancel" ? "Cancelar ingreso pendiente" : "Revertir ingreso contabilizado"}
+      description={action === "cancel" ? "No se generará un movimiento contable. El ingreso quedará conservado para auditoría." : "Se registrará un movimiento financiero contrario; el ingreso original se conserva."}
       className="w-full max-w-lg"
       preventClose={loading}
       initialFocusRef={reasonRef}
@@ -63,7 +64,7 @@ export function VoidIncomeModal({ open, income, loading = false, onClose, onConf
         <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
           <SystemButton variant="ghost" onClick={onClose} disabled={loading}>Cancelar</SystemButton>
           <SystemButton variant="danger" leftIcon={<Ban className="h-4 w-4" />} onClick={confirm} loading={loading}>
-            Anular ingreso
+            {action === "cancel" ? "Cancelar ingreso" : "Revertir ingreso"}
           </SystemButton>
         </div>
       )}

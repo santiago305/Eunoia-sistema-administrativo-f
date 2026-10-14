@@ -5,16 +5,31 @@ import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { TRANSITION_PURPOSES, type AvailableTransition } from "@/features/workflows/types/workflow";
 import { SaleOrderStatusPopover } from "./SaleOrderStatusPopover";
 
-const { changeState, getTransitions, onOrderChanged, showFeedback } = vi.hoisted(() => ({
+const { changeState, getTransitions, listPayments, cancelOrder, listCancellationTargets, onOrderChanged, showFeedback } = vi.hoisted(() => ({
   changeState: vi.fn(),
   getTransitions: vi.fn(),
+  listPayments: vi.fn(),
+  cancelOrder: vi.fn(),
+  listCancellationTargets: vi.fn(),
   onOrderChanged: vi.fn(),
   showFeedback: vi.fn(),
 }));
 
+vi.mock("@/shared/services/incomeService", () => ({ listIncomeCancellationTargets: listCancellationTargets }));
+
 vi.mock("@/shared/services/saleOrderService", () => ({
   changeSaleOrderState: changeState,
   getAvailableSaleOrderTransitions: getTransitions,
+  listSaleOrderPayments: listPayments,
+  cancelSaleOrder: cancelOrder,
+}));
+
+vi.mock("@/shared/hooks/usePermissions", () => ({
+  usePermissions: () => ({ can: () => true }),
+}));
+
+vi.mock("@/shared/hooks/useAuth", () => ({
+  useAuth: () => ({ userId: "unit-user" }),
 }));
 
 vi.mock("@/features/sale-orders/utils/showTransitionWarnings", () => ({
@@ -124,4 +139,79 @@ describe("SaleOrderStatusPopover", () => {
     );
     expect(onOrderChanged).not.toHaveBeenCalled();
   });
+
+  it("routes cancellation through payment resolution instead of the generic transition", async () => {
+    const cancelTransition = { ...transition, id: "cancel-transition", name: "Cancelar pedido", code: "CANCEL", purpose: TRANSITION_PURPOSES.CANCEL } satisfies AvailableTransition;
+    getTransitions.mockReset().mockResolvedValue([cancelTransition]);
+    listPayments.mockReset().mockResolvedValue([]);
+    cancelOrder.mockReset().mockResolvedValue({ saleOrderId: "order-1", currentStateId: "cancelled" });
+    changeState.mockReset();
+    onOrderChanged.mockReset();
+
+    render(<SaleOrderStatusPopover order={order} onOrderChanged={onOrderChanged} />);
+    await userEvent.click(screen.getByRole("button", { name: "Pendiente" }));
+    await userEvent.click(screen.getByText("Cancelar pedido"));
+
+    expect(changeState).not.toHaveBeenCalled();
+    expect(await screen.findByText(/No hay ingresos pendientes ni contabilizados/)).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText(/Confirmo las resoluciones indicadas/));
+    await userEvent.click(screen.getByRole("button", { name: /Resolver y cancelar pedido/ }));
+
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith("order-1", expect.objectContaining({ resolutions: [] })));
+    expect(onOrderChanged).toHaveBeenCalledWith("order-1");
+  });
+
+  it("retries an uncertain cancellation with its original request and key, without allowing edits", async () => {
+    getTransitions.mockReset().mockResolvedValue([{ ...transition, id: "cancel-transition", name: "Cancelar pedido", purpose: TRANSITION_PURPOSES.CANCEL }]);
+    listPayments.mockReset().mockResolvedValue([]);
+    cancelOrder.mockReset()
+      .mockRejectedValueOnce(new Error("network connection lost"))
+      .mockResolvedValueOnce({ saleOrderId: "order-1", currentStateId: "cancelled" });
+    onOrderChanged.mockReset();
+    sessionStorage.clear();
+
+    render(<SaleOrderStatusPopover order={order} onOrderChanged={onOrderChanged} />);
+    await userEvent.click(screen.getByRole("button", { name: "Pendiente" }));
+    await userEvent.click(screen.getByText("Cancelar pedido"));
+    await userEvent.click(await screen.findByLabelText(/Confirmo las resoluciones indicadas/));
+    await userEvent.click(screen.getByRole("button", { name: "Resolver y cancelar pedido" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(/Se conservaron sus decisiones/);
+    const firstRequest = cancelOrder.mock.calls[0];
+    expect(firstRequest[1].idempotencyKey).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(screen.getByLabelText(/Confirmo las resoluciones indicadas/)).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Reintentar cancelación segura" }));
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalledTimes(2));
+    expect(cancelOrder.mock.calls[1]).toEqual(firstRequest);
+    expect(onOrderChanged).toHaveBeenCalledWith("order-1");
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it("requires a compatible target before transferring a pending payment during cancellation", async () => {
+    getTransitions.mockReset().mockResolvedValue([{ ...transition, id: "cancel-transition", name: "Cancelar pedido", purpose: TRANSITION_PURPOSES.CANCEL }]);
+    listPayments.mockReset().mockResolvedValue([{
+      id: "income-1", version: 2, status: "PENDING_CONFIRMATION", amount: 25, currency: "PEN", method: "Transferencia",
+      operationNumber: "OP-1", date: "2026-10-02", note: null, bankAccount: null, createdAt: "2026-10-02",
+    }]);
+    listCancellationTargets.mockReset().mockResolvedValue([{
+      saleOrderId: "order-2", saleOrderNumber: "SO-2", clientName: "Cliente", total: 100, available: 75, currency: "PEN",
+    }]);
+    cancelOrder.mockReset().mockResolvedValue({ saleOrderId: "order-1" });
+
+    render(<SaleOrderStatusPopover order={order} onOrderChanged={onOrderChanged} />);
+    await userEvent.click(screen.getByRole("button", { name: "Pendiente" }));
+    await userEvent.click(screen.getByText("Cancelar pedido"));
+    await userEvent.selectOptions(await screen.findByLabelText("Resolución"), "TRANSFER_PENDING");
+    expect(await screen.findByText(/SO-2 · Cliente · Disponible/)).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Pedido destino"), "order-2");
+    await userEvent.type(screen.getByLabelText(/Motivo/), "Ingreso asociado a otro pedido");
+    await userEvent.click(screen.getByLabelText(/Confirmo las resoluciones indicadas/));
+    await userEvent.click(screen.getByRole("button", { name: /Resolver y cancelar pedido/ }));
+
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith("order-1", expect.objectContaining({
+      resolutions: [expect.objectContaining({ incomeId: "income-1", action: "TRANSFER_PENDING", targetSaleOrderId: "order-2" })],
+    })));
+  });
+
 });

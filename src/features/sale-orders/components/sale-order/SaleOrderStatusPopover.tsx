@@ -11,6 +11,8 @@ import {
 import { showTransitionWarnings } from "@/features/sale-orders/utils/showTransitionWarnings";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { SaleOrderWorkflowHistoryModal } from "./SaleOrderWorkflowHistoryModal";
+import { SaleOrderCancellationResolutionModal } from "./SaleOrderCancellationResolutionModal";
+import { TRANSITION_PURPOSES } from "@/features/workflows/types/workflow";
 
 type Props = {
   order: SaleOrder;
@@ -54,6 +56,7 @@ export function SaleOrderStatusPopover({ order, onOrderChanged }: Props) {
   );
   const [transitionError, setTransitionError] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [cancellationOpen, setCancellationOpen] = useState(false);
   const loadingTransitionsRef = useRef(false);
 
   const stateName = order.currentState?.name ?? "Sin estado";
@@ -80,6 +83,10 @@ export function SaleOrderStatusPopover({ order, onOrderChanged }: Props) {
   const executeTransition = useCallback(
     async (transition: AvailableTransition) => {
       if (!transition.available) return;
+      if (transition.purpose === TRANSITION_PURPOSES.CANCEL) {
+        setCancellationOpen(true);
+        return;
+      }
       setLoadingTransitionId(transition.id);
       setTransitionError("");
       try {
@@ -222,6 +229,16 @@ export function SaleOrderStatusPopover({ order, onOrderChanged }: Props) {
         open={historyOpen}
         saleOrderId={order.id}
         onClose={() => setHistoryOpen(false)}
+      />
+      <SaleOrderCancellationResolutionModal
+        open={cancellationOpen}
+        saleOrderId={order.id}
+        onClose={() => setCancellationOpen(false)}
+        onCompleted={async () => {
+          await onOrderChanged(order.id);
+          await loadTransitions();
+          showFeedback({ type: "success", title: "Pedido cancelado", message: "Los ingresos se resolvieron según lo indicado." });
+        }}
       />
     </>
   );

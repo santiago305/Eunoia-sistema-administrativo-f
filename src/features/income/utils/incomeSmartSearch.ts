@@ -27,6 +27,29 @@ export function buildIncomeSmartSearchColumns(catalogs: IncomeSearchCatalogs = {
       operators: CATALOG_OPERATORS,
     },
     {
+      key: "reconciliationStatus",
+      id: "reconciliationStatus",
+      label: "Conciliación bancaria",
+      kind: "catalog",
+      options: [
+        { id: "UNRECONCILED", label: "Sin conciliar" },
+        { id: "PARTIALLY_RECONCILED", label: "Conciliación parcial" },
+        { id: "RECONCILED", label: "Conciliado" },
+      ],
+      operators: CATALOG_OPERATORS,
+    },
+    {
+      key: "customerCreditStatus",
+      id: "customerCreditStatus",
+      label: "Saldo a favor",
+      kind: "catalog",
+      options: [
+        { id: "HAS_BALANCE", label: "Con saldo disponible" },
+        { id: "NO_BALANCE", label: "Sin saldo disponible" },
+      ],
+      operators: CATALOG_OPERATORS,
+    },
+    {
       key: "paymentMethodId",
       id: "paymentMethodId",
       label: "Método de pago",
@@ -83,7 +106,7 @@ export const upsertIncomeRule = (snapshot: IncomeSearchSnapshot, rule: IncomeSea
   if (!values.length && !rule.value?.trim()) return { ...snapshot, filters: next };
 
   const normalizedRule = { ...rule, mode: rule.mode ?? "include", ...(values.length ? { values } : {}), ...(rule.value ? { value: rule.value.trim() } : {}) };
-  if ((rule.field === "status" || rule.field === "hasEvidence") && values.length > 1) {
+  if ((rule.field === "status" || rule.field === "hasEvidence" || rule.field === "reconciliationStatus" || rule.field === "customerCreditStatus") && values.length > 1) {
     return { ...snapshot, filters: next };
   }
   return { ...snapshot, filters: [...next, normalizedRule] };

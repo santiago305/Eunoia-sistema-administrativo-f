@@ -19,6 +19,7 @@ import type { AdviserOption } from "@/shared/services/adviserService";
 import { listSubsidiaries } from "@/shared/services/agencyService";
 import {
   correctSaleOrderTotal,
+  previewCorrectSaleOrderTotal,
   getSaleOrderEditorCatalogs,
   matchSaleOrderProductPack,
   repairSaleOrderWorkflow,
@@ -51,6 +52,7 @@ import {
   type SaleOrderEditorForm,
 } from "./saleOrderEditorForm";
 import { normalizeMoney, parseDecimalInput } from "@/shared/utils/functionPurchases";
+import { createIdempotencyKey } from "@/shared/utils/idempotencyKey";
 import {
   getIndependentProductMatchCandidate,
   groupIndependentProductsAsMatchedPack,
@@ -82,6 +84,30 @@ const money = new Intl.NumberFormat("es-PE", {
   style: "currency",
   currency: "PEN",
 });
+
+async function saveCommandFingerprint(
+  payload: ReturnType<typeof toSaveSaleOrderWithClientDto>,
+  shippingPhoto: File | null,
+  paymentPhotos: Map<string, File>,
+): Promise<string> {
+  const fingerprintFile = async (file: File) => {
+    let contentHash = "";
+    try {
+      const bytes = await file.arrayBuffer();
+      const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+      contentHash = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
+    } catch {
+      contentHash = `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+    }
+    return { name: file.name, type: file.type, size: file.size, contentHash };
+  };
+  const sortedPaymentPhotos = [...paymentPhotos.entries()].sort(([left], [right]) => left.localeCompare(right));
+  return JSON.stringify({
+    payload,
+    shippingPhoto: shippingPhoto ? await fingerprintFile(shippingPhoto) : null,
+    paymentPhotos: await Promise.all(sortedPaymentPhotos.map(async ([clientKey, file]) => [clientKey, await fingerprintFile(file)])),
+  });
+}
 
 export function SaleOrderEditor({
   mode,
@@ -144,6 +170,8 @@ export function SaleOrderEditor({
     SaleOrderPaymentSelectOption[]
   >([]);
   const initialSnapshot = useRef("");
+  const saveCommandRef = useRef<{ fingerprint: string; idempotencyKey: string } | null>(null);
+  const uncertainSaveRef = useRef<{ fingerprint: string; idempotencyKey: string } | null>(null);
   const itemsSectionRef = useRef<SaleOrderItemsSectionHandle>(null);
   const supplyRecipeRequestRef = useRef(0);
   const supplyRecipeAbortRef = useRef<AbortController | null>(null);
@@ -504,16 +532,22 @@ export function SaleOrderEditor({
     [form.deliveryCost, form.discount, form.discountType, form.items],
   );
 
-  const totalPaid = useMemo(
+  const totalReceived = useMemo(
     () =>
       form.payments.reduce(
-        (sum, payment) => payment.status === "CANCELLED" || payment.status === "REVERSED" || payment.status === "VOIDED"
-          ? sum
-          : sum + Number(payment.amount || 0),
+        (sum, payment) => payment.status === "POSTED"
+          ? sum + Number(payment.amount || 0)
+          : sum,
         0,
       ),
     [form.payments],
   );
+  const totalPaid = mode === "edit" && order
+    ? Number(order.totalApplied ?? order.totalPaid ?? totalReceived)
+    : totalReceived;
+  const receivedAmount = mode === "edit" && order
+    ? Number(order.totalReceived ?? totalReceived)
+    : totalReceived;
   const pendingAmount = Math.max(0, totals.total - totalPaid);
   const isAdvancedOrder =
     mode === "edit" &&
@@ -540,11 +574,11 @@ export function SaleOrderEditor({
     Boolean(order?.workflowId && order.currentStateId);
 
   const applyTotalCorrection = useCallback(
-    async (total: number) => {
+    async (total: number, previewToken: string) => {
       if (!order) return;
       setCorrectingTotal(true);
       try {
-        const result = await correctSaleOrderTotal(order.id, total);
+        const result = await correctSaleOrderTotal(order.id, total, previewToken);
         setCorrectTotalOpen(false);
         sileo.success({
           title: result.stateChanged
@@ -563,6 +597,11 @@ export function SaleOrderEditor({
     [onSaved, order],
   );
 
+  const previewTotalCorrection = useCallback(
+    (total: number) => order ? previewCorrectSaleOrderTotal(order.id, total) : Promise.reject(new Error("Pedido no disponible")),
+    [order],
+  );
+
   const persist = useCallback(async () => {
     setSaving(true);
     try {
@@ -573,6 +612,17 @@ export function SaleOrderEditor({
           paymentPhotos.set(payment.clientKey, payment.photo);
         }
       }
+      const fingerprint = await saveCommandFingerprint(payload, form.shippingPhoto, paymentPhotos);
+      const uncertainSave = uncertainSaveRef.current;
+      if (uncertainSave && uncertainSave.fingerprint !== fingerprint) {
+        sileo.error({
+          title: "El último guardado no tuvo confirmación. Reintenta sin cambiar los datos o vuelve a abrir el pedido para verificarlo antes de hacer otro cambio.",
+        });
+        return;
+      }
+      if (!saveCommandRef.current || saveCommandRef.current.fingerprint !== fingerprint) {
+        saveCommandRef.current = { fingerprint, idempotencyKey: createIdempotencyKey() };
+      }
       const result = await saveSaleOrderWithClient(
         payload,
         {
@@ -580,7 +630,10 @@ export function SaleOrderEditor({
           paymentPhotos,
         },
         mode === "edit" ? order?.id : null,
+        saveCommandRef.current.idempotencyKey,
       );
+      saveCommandRef.current = null;
+      uncertainSaveRef.current = null;
       initialSnapshot.current = getSaleOrderEditorSnapshot(form);
       onDirtyChange?.(false);
       sileo.success(
@@ -590,9 +643,18 @@ export function SaleOrderEditor({
       );
       await onSaved(result.orderId);
     } catch (error) {
-      sileo.error({
-        title: parseApiError(error, "No se pudo guardar el pedido."),
-      });
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      const outcomeUncertain = status === undefined || status === 408 || status === 429 || status >= 500;
+      if (outcomeUncertain && saveCommandRef.current) {
+        uncertainSaveRef.current = saveCommandRef.current;
+        sileo.error({
+          title: "No se confirmó la respuesta del servidor. Vuelve a guardar sin cambiar los datos; el sistema reconocerá la operación y evitará duplicar el ingreso.",
+        });
+      } else {
+        sileo.error({
+          title: parseApiError(error, "No se pudo guardar el pedido."),
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -886,7 +948,13 @@ export function SaleOrderEditor({
                       </dd>
                     </div>
                     <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
-                      <dt className="text-muted-foreground">Total pagado</dt>
+                      <dt className="text-muted-foreground">Total recibido</dt>
+                      <dd className="font-semibold tabular-nums">
+                        {money.format(receivedAmount)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">Aplicado al pedido</dt>
                       <dd className="font-semibold tabular-nums">
                         {money.format(totalPaid)}
                       </dd>
@@ -895,6 +963,12 @@ export function SaleOrderEditor({
                       <dt className="text-muted-foreground">Pendiente</dt>
                       <dd className="font-semibold tabular-nums">
                         {money.format(pendingAmount)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">Excedente disponible</dt>
+                      <dd className="font-semibold tabular-nums text-sky-700">
+                        {money.format(order?.customerCreditAvailable ?? 0)}
                       </dd>
                     </div>
                   </dl>
@@ -906,6 +980,12 @@ export function SaleOrderEditor({
                   setForm={setForm}
                   methodOptions={paymentMethodOptions}
                   bankAccountOptions={bankAccountOptions}
+                  saleOrderId={mode === "edit" ? order?.id : undefined}
+                  persistedClientId={mode === "edit" ? order?.client?.id : undefined}
+                  currency={order?.currency ?? "PEN"}
+                  remainingAmount={order?.pendingAmount ?? 0}
+                  hasUnsavedChanges={isDirty}
+                  onCreditApplied={onOrderChanged}
                 />
                 <SaleOrderEditorSection title="Nota">
                   <FloatingTextarea
@@ -978,6 +1058,7 @@ export function SaleOrderEditor({
           loading={correctingTotal}
           onClose={() => setCorrectTotalOpen(false)}
           onConfirm={applyTotalCorrection}
+          onPreview={previewTotalCorrection}
         />
       ) : null}
       <AlertModal

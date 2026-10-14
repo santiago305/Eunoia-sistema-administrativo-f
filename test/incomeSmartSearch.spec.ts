@@ -10,6 +10,8 @@ describe("incomeSmartSearch", () => {
 
     expect(columns.map((column) => column.key)).toEqual([
       "status",
+      "reconciliationStatus",
+      "customerCreditStatus",
       "paymentMethodId",
       "detail",
       "companyPaymentAccountId",

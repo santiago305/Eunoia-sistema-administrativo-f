@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PurchaseDetailsModal } from "./PurchaseDetailsModal";
 import { PurchaseOrderStatuses, VoucherDocTypes } from "@/features/purchases/types/purchaseEnums";
 
+vi.mock("@/env", () => ({ env: { apiBaseUrl: "http://localhost:3000/api" } }));
+
 const { getByIdMock, listPurchaseAttachmentsMock, uploadPurchaseImageProdutionMock, permissionsMock } = vi.hoisted(() => ({
   getByIdMock: vi.fn(),
   listPurchaseAttachmentsMock: vi.fn(),

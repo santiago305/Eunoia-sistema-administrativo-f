@@ -43,6 +43,7 @@ export type SaleOrderEditorClientData = {
 
 export type SaleOrderEditorPayment = {
   id?: string;
+  version?: number;
   clientKey: string;
   bankAccountId?: string | null;
   companyPaymentAccountId?: string | null;
@@ -290,6 +291,7 @@ export function mapSaleOrderToEditorForm(
       const attachment = proofByPaymentId.get(payment.id);
       return {
         id: payment.id,
+        version: payment.version,
         clientKey: payment.clientKey ?? payment.id,
         bankAccountId: payment.bankAccount?.id ?? null,
         companyPaymentAccountId: payment.companyPaymentAccountId ?? payment.bankAccount?.id ?? null,
@@ -303,7 +305,7 @@ export function mapSaleOrderToEditorForm(
         existingPhotoUrl:
           attachment?.url ?? payment.paymentPhoto ?? null,
         existingAttachmentId: attachment?.id ?? null,
-        status: payment.status ?? "PENDING_CONFIRMATION",
+        status: payment.status,
         voidedAt: payment.voidedAt ?? null,
         voidReason: payment.voidReason ?? null,
       };
@@ -413,6 +415,7 @@ export function toSaveSaleOrderWithClientDto(
     })),
     payments: form.payments.map((payment) => ({
       id: payment.id,
+      version: payment.version,
       clientKey: payment.clientKey,
       bankAccountId: payment.bankAccountId ?? null,
       companyPaymentAccountId: payment.companyPaymentAccountId ?? payment.bankAccountId ?? null,

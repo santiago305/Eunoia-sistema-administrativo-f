@@ -246,6 +246,7 @@ export enum PaymentDescription {
 
 export type SaleOrderPaymentInput = {
   id?: string;
+  version?: number;
   clientKey?: string;
   method: string;
   amount: number;
@@ -484,6 +485,7 @@ export type SaleOrderPaymentStatus = "PAID" | "PENDING";
 
 export type SaleOrderPayment = {
   id: string;
+  version?: number;
   clientKey?: string;
   bankAccount: { id: string; name: string; number?: string | null } | null;
   companyPaymentAccountId?: string | null;
@@ -505,6 +507,7 @@ export type SaleOrderPayment = {
 
 export type SaleOrder = {
   id: string;
+  currency?: string;
   serie: string | null;
   correlative: number | null;
   client: {
@@ -593,6 +596,9 @@ export type SaleOrder = {
   createdAt: string;
   updatedAt: string | null;
   totalPaid: number;
+  totalReceived?: number;
+  totalApplied?: number;
+  customerCreditAvailable?: number;
   reserveBool?: boolean | null;
   pendingAmount: number;
   paymentStatus: SaleOrderPaymentStatus;

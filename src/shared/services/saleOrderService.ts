@@ -55,6 +55,25 @@ export type ChangeSaleOrderStateResponse = {
   warnings: string[];
 };
 
+export type SaleOrderCancellationResolution = {
+  incomeId: string;
+  action: "CANCEL_PENDING" | "TRANSFER_PENDING" | "KEEP_AS_CREDIT" | "APPLY_TO_ORDER" | "REFUND";
+  reason: string;
+  targetSaleOrderId?: string;
+  amount?: number;
+};
+
+export const cancelSaleOrder = async (
+  saleOrderId: string,
+  payload: { idempotencyKey?: string; resolutions?: SaleOrderCancellationResolution[] },
+): Promise<{ saleOrderId: string; currentStateId: string }> => {
+  const response = await axiosInstance.patch<{ saleOrderId: string; currentStateId: string }>(
+    API_SALE_ORDERS_GROUP.cancel(saleOrderId),
+    payload,
+  );
+  return response.data;
+};
+
 export type RepairSaleOrderWorkflowResponse = {
   repaired: boolean;
   reason: string;
@@ -96,6 +115,18 @@ export type CorrectSaleOrderTotalResponse = {
   currentState: { id: string; code: string; name: string };
   stateChanged: boolean;
   stockRestoredAndReserved: boolean;
+};
+
+export type CorrectSaleOrderTotalPreview = {
+  saleOrderId: string;
+  currency: "PEN" | "USD";
+  currentTotal: number;
+  correctedTotal: number;
+  appliedAmount: number;
+  pendingAmount: number;
+  customerCreditCreated: number;
+  releasedByIncome: Array<{ paymentId: string; currency: "PEN" | "USD"; amount: number }>;
+  previewToken: string;
 };
 
 export type SaleOrderBulkActionSuccessRow = {
@@ -433,17 +464,20 @@ export const deleteSaleOrder = async (
 export const saveSaleOrderWithClient = async (
   payload: SaveSaleOrderWithClientDto,
   files: SaveSaleOrderWithClientFiles = {},
-  saleOrderId?: string | null,
+  saleOrderId: string | null | undefined,
+  idempotencyKey: string,
 ): Promise<CreateSaleOrderResponse & { clientId: string }> => {
   const body = buildSaleOrderUnifiedRequest({ data: payload, ...files });
   const response = saleOrderId
     ? await axiosInstance.patch<CreateSaleOrderResponse & { clientId: string }>(
         API_SALE_ORDERS_GROUP.updateWithClient(saleOrderId),
         body,
+        { headers: { "Idempotency-Key": idempotencyKey } },
       )
     : await axiosInstance.post<CreateSaleOrderResponse & { clientId: string }>(
         API_SALE_ORDERS_GROUP.createWithClient,
         body,
+        { headers: { "Idempotency-Key": idempotencyKey } },
       );
   return response.data;
 };
@@ -502,9 +536,21 @@ export const resolveSaleOrderImportAdvisers = async (
 export const correctSaleOrderTotal = async (
   saleOrderId: string,
   total: number,
+  previewToken: string,
 ): Promise<CorrectSaleOrderTotalResponse> => {
   const response = await axiosInstance.patch<CorrectSaleOrderTotalResponse>(
     API_SALE_ORDERS_GROUP.correctTotal(saleOrderId),
+    { total, previewToken },
+  );
+  return response.data;
+};
+
+export const previewCorrectSaleOrderTotal = async (
+  saleOrderId: string,
+  total: number,
+): Promise<CorrectSaleOrderTotalPreview> => {
+  const response = await axiosInstance.post<CorrectSaleOrderTotalPreview>(
+    API_SALE_ORDERS_GROUP.previewCorrectTotal(saleOrderId),
     { total },
   );
   return response.data;

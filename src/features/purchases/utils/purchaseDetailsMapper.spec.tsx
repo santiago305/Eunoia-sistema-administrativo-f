@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AfectType, CurrencyTypes, PaymentFormTypes, PaymentTypes, PurchaseOrderStatuses, VoucherDocTypes } from "@/features/purchases/types/purchaseEnums";
 import type { PurchaseAttachment } from "@/features/purchases/types/purchase-attachment.types";
 import type { PurchaseOrderDetailOutput } from "@/features/purchases/types/itemPurchaseEdit";
 import type { SummaryPurchase } from "@/features/purchases/types/purchaseDetails";
 import { buildPurchaseExtendedDetailsConfig } from "./purchaseDetailsMapper";
+
+vi.mock("@/env", () => ({ env: { apiBaseUrl: "http://localhost:3000/api" } }));
 
 const purchase: SummaryPurchase = {
   poId: "purchase-1",
