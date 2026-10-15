@@ -305,7 +305,9 @@ export function IncomeTable({
       pagination={pagination}
       onPageChange={onPageChange}
       selectableColumns
+      showSelectionInfo={false}
       selectableRows={Boolean(onSelectedRowKeysChange)}
+      isRowSelectable={(row) => row.status === "PENDING_CONFIRMATION"}
       selectedRowKeys={selectedRowKeys}
       onSelectedRowKeysChange={onSelectedRowKeysChange}
       rangeDates={rangeDates}

@@ -38,19 +38,20 @@ export function DataTableSearchBar({
   const [metricName, setMetricName] = useState("");
 
   useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
+    const handlePointerDown = (event: PointerEvent) => {
       if (metricModalOpen) return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("[data-floating-overlay-root='true']")) {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-floating-overlay-root='true']")) {
         return;
       }
-      if (!wrapperRef.current?.contains(event.target as Node)) {
+      const isInsideSearchArea = target instanceof Node && wrapperRef.current?.contains(target);
+      if (!isInsideSearchArea) {
         setOpen(false);
       }
     };
 
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [metricModalOpen]);
 
   const handleSaveMetric = async () => {
@@ -64,9 +65,9 @@ export function DataTableSearchBar({
 
   return (
     <>
-      <div ref={wrapperRef} className="relative z-40">
+      <div ref={wrapperRef} className="relative z-40 w-full max-w-md">
         <div className="min-w-0">
-          <div className="relative w-full max-w-md">
+          <div className="relative w-full">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <FloatingInput
               label={searchLabel}
@@ -104,7 +105,7 @@ export function DataTableSearchBar({
         {open ? (
           <div
             className={cn(
-              "absolute left-0 top-[calc(100%+0.5rem)] flex w-full max-w-md flex-col overflow-hidden rounded-sm border border-border/70 bg-background shadow-xl",
+              "absolute left-0 top-[calc(100%+0.5rem)] flex w-full flex-col overflow-hidden rounded-sm border border-border/70 bg-background shadow-xl",
               panelClassName,
             )}
           >

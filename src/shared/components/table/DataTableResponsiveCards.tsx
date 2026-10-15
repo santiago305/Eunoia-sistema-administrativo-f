@@ -1,5 +1,5 @@
 import type { MouseEvent, ReactNode } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, CheckSquare, Loader2, Square } from "lucide-react";
 import type { DataTableColumn } from "./types";
 
 type CopyFeedback = {
@@ -15,6 +15,10 @@ type Props<T> = {
   animated?: boolean;
   visibleOnDesktop?: boolean;
   rowClickable?: boolean;
+  selectableRows?: boolean;
+  selectedRowKeys?: string[];
+  isRowSelectable?: (row: T, index: number) => boolean;
+  onToggleRow?: (row: T, index: number) => void;
   onRowClick?: (row: T, index: number) => void;
   rowClassName?: (row: T, index: number) => string | undefined;
   resolveRowKey: (row: T, index: number) => string;
@@ -51,6 +55,10 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
   animated = true,
   visibleOnDesktop = false,
   rowClickable,
+  selectableRows = false,
+  selectedRowKeys = [],
+  isRowSelectable,
+  onToggleRow,
   onRowClick,
   rowClassName,
   resolveRowKey,
@@ -148,7 +156,24 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
           };
 
         const content = (
-          <div className={cardClasses}>
+          <div className={cn(cardClasses, selectedRowKeys.includes(resolveRowKey(row, index)) && "bg-primary/5")}>
+            {selectableRows ? (
+              <div className="mb-3 flex justify-end">
+                <button
+                  type="button"
+                  disabled={isRowSelectable ? !isRowSelectable(row, index) : false}
+                  aria-label={selectedRowKeys.includes(resolveRowKey(row, index)) ? "Deseleccionar fila" : "Seleccionar fila"}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (isRowSelectable && !isRowSelectable(row, index)) return;
+                    onToggleRow?.(row, index);
+                  }}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {selectedRowKeys.includes(resolveRowKey(row, index)) ? <CheckSquare className="h-4 w-4" aria-hidden="true" /> : <Square className="h-4 w-4" aria-hidden="true" />}
+                </button>
+              </div>
+            ) : null}
             {titleColumn ? (
               <div className="mb-4">
                 <div className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">

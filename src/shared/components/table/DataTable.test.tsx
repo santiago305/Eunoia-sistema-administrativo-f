@@ -82,6 +82,62 @@ describe("DataTable toolbar actions", () => {
   });
 });
 
+describe("DataTable row selection", () => {
+  const columns = [{ id: "name", header: "Nombre", accessorKey: "name" as const }];
+  const data = [
+    { id: "pending", name: "Pendiente", status: "PENDING" },
+    { id: "posted", name: "Contabilizado", status: "POSTED" },
+  ];
+
+  it("selects only rows allowed by isRowSelectable and exposes accessible controls", () => {
+    const onSelectedRowKeysChange = vi.fn();
+
+    render(
+      <DataTable
+        tableId="selectable-rows-test"
+        data={data}
+        columns={columns}
+        rowKey="id"
+        selectableRows
+        selectedRowKeys={[]}
+        isRowSelectable={(row) => row.status === "PENDING"}
+        onSelectedRowKeysChange={onSelectedRowKeysChange}
+      />,
+    );
+
+    const rowButtons = screen.getAllByRole("button", { name: "Seleccionar fila" });
+    expect(rowButtons).toHaveLength(2);
+    expect(rowButtons[0]).toBeEnabled();
+    expect(rowButtons[1]).toBeDisabled();
+
+    fireEvent.click(rowButtons[0]);
+    expect(onSelectedRowKeysChange).toHaveBeenCalledWith(["pending"], expect.objectContaining({
+      selectedKeys: ["pending"],
+    }));
+  });
+
+  it("selects all available rows without including disabled rows", () => {
+    const onSelectedRowKeysChange = vi.fn();
+
+    render(
+      <DataTable
+        tableId="selectable-all-test"
+        data={data}
+        columns={columns}
+        rowKey="id"
+        selectableRows
+        isRowSelectable={(row) => row.status === "PENDING"}
+        onSelectedRowKeysChange={onSelectedRowKeysChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Seleccionar todas las filas disponibles" }));
+    expect(onSelectedRowKeysChange).toHaveBeenCalledWith(["pending"], expect.objectContaining({
+      selectedKeys: ["pending"],
+    }));
+  });
+});
+
 describe("DataTable smart range date", () => {
   const columns = [{ id: "name", header: "Nombre", accessorKey: "name" as const }];
   const data = [{ id: "1", name: "Pedido demo" }];

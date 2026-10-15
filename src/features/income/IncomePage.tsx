@@ -40,6 +40,7 @@ import { SaleIncomeModal, type SaleIncomeModalValues } from "@/shared/components
 import { useSaleOrderPaymentOptions, filterSaleOrderBankAccountOptions } from "@/features/sale-orders/components/useSaleOrderPaymentOptions";
 import { getIncomeEvidence, getIncomeEvidenceContent, uploadIncomeEvidence } from "@/shared/services/incomeService";
 import { DataTableSearchBar, DataTableSearchChips } from "@/shared/components/table/search";
+import { IncomeBulkPostingActions } from "./components/IncomeBulkPostingActions";
 import { buildIncomeSearchChips, normalizeIncomeSnapshot, removeIncomeRule, upsertIncomeRule } from "./utils/incomeSmartSearch";
 import { ExportPopover, type ExportColumn } from "@/shared/components/components/ExportPopover";
 import {
@@ -131,6 +132,7 @@ export default function IncomePage() {
   const [pendingCorrectionRecoveries, setPendingCorrectionRecoveries] = useState<PendingIncomeOperation[]>([]);
   const [recoveringCorrection, setRecoveringCorrection] = useState(false);
   const [selectedIncomeIds, setSelectedIncomeIds] = useState<string[]>([]);
+  const [bulkSelectionMode, setBulkSelectionMode] = useState(false);
   const [range, setRange] = useState(() => currentLimaMonth());
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -669,6 +671,7 @@ export default function IncomePage() {
       else clearSingleRecovery();
       setPostingPayments([]);
       setSelectedIncomeIds([]);
+      setBulkSelectionMode(false);
       await loadIncome();
     } catch (caught: unknown) {
       const error = normalizeIncomeApiError(caught);
@@ -679,6 +682,7 @@ export default function IncomePage() {
           clearBatchRecovery();
           setPostingPayments([]);
           setSelectedIncomeIds([]);
+          setBulkSelectionMode(false);
           showFeedback(successResponse("La contabilización se completó. Se recuperó el resultado del lote."));
           await loadIncome();
           return;
@@ -690,6 +694,7 @@ export default function IncomePage() {
           clearSingleRecovery();
           setPostingPayments([]);
           setSelectedIncomeIds([]);
+          setBulkSelectionMode(false);
           showFeedback(successResponse("La contabilizaciÃ³n se completÃ³. Se recuperÃ³ el resultado del ingreso."));
           await loadIncome();
           return;
@@ -723,6 +728,7 @@ export default function IncomePage() {
       clearBatchRecovery();
       setPostingPayments([]);
       setSelectedIncomeIds([]);
+      setBulkSelectionMode(false);
       showFeedback(successResponse("Resultado del lote recuperado correctamente."));
       await loadIncome();
     } catch (caught: unknown) {
@@ -757,6 +763,7 @@ export default function IncomePage() {
       clearSingleRecovery();
       setPostingPayments([]);
       setSelectedIncomeIds([]);
+      setBulkSelectionMode(false);
       showFeedback(successResponse("Resultado de la contabilizaciÃ³n individual recuperado correctamente."));
       await loadIncome();
     } catch (caught: unknown) {
@@ -977,11 +984,26 @@ export default function IncomePage() {
           else setPostingPayments([row]);
         }}
         selectedRowKeys={selectedIncomeIds}
-        onSelectedRowKeysChange={can("sale_orders.payments.post_bulk") ? handleSelectionChange : undefined}
+        onSelectedRowKeysChange={can("sale_orders.payments.post_bulk") && bulkSelectionMode ? handleSelectionChange : undefined}
         toolbarActions={<div className="flex flex-wrap items-center gap-2">
           {can("income.reconciliation.view") ? <button type="button" className="min-h-10 rounded-md border border-sky-800 px-3 text-sm font-semibold text-sky-900 hover:bg-sky-50" onClick={() => setReconciliationReportOpen(true)}>Informe de conciliación</button> : null}
           {can("income.export") ? <ExportPopover columns={INCOME_EXPORT_COLUMNS} loading={exporting} onExport={handleExportIncome} /> : null}
-          {can("sale_orders.payments.post_bulk") ? <button type="button" className="min-h-10 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50" disabled={!selectedPending.length || posting} onClick={() => setPostingPayments(selectedPending)}>Contabilizar seleccionados ({selectedPending.length})</button> : null}
+          {can("sale_orders.payments.post_bulk") ? (
+            <IncomeBulkPostingActions
+              active={bulkSelectionMode}
+              selectedCount={selectedPending.length}
+              posting={posting}
+              onStart={() => {
+                setSelectedIncomeIds([]);
+                setBulkSelectionMode(true);
+              }}
+              onCancel={() => {
+                setSelectedIncomeIds([]);
+                setBulkSelectionMode(false);
+              }}
+              onPost={() => setPostingPayments(selectedPending)}
+            />
+          ) : null}
         </div>}
         onEvidence={setEvidenceIncome}
         onEdit={setEditingIncome}

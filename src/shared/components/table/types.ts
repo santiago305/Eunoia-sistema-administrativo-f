@@ -144,6 +144,7 @@ export type DataTableProps<T> = {
     responsiveCards?: boolean;
     responsiveMode?: DataTableResponsiveMode;
     selectableRows?: boolean;
+    isRowSelectable?: (row: T, index: number) => boolean;
     selectedRowKeys?: string[];
     defaultSelectedRowKeys?: string[];
     onSelectedRowKeysChange?: (selectedKeys: string[], meta: DataTableSelectionChangeMeta<T>) => void;

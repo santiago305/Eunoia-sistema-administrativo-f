@@ -55,5 +55,5 @@ export function IncomeKpiStrip({ summary, loading = false, onStatusFilter, onObs
     });
   }
 
-  return <SummaryMetricCards items={items} loading={loading} columnsClassName="grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8" ariaLabel="Resumen de ingresos" />;
+  return <SummaryMetricCards items={items} loading={loading} columnsClassName="grid-cols-2 gap-2 sm:grid-cols-[repeat(auto-fit,minmax(12rem,1fr))]" ariaLabel="Resumen de ingresos" />;
 }

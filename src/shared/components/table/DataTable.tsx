@@ -99,6 +99,7 @@ export function DataTable<T extends Record<string, unknown>>({
   responsiveCards = true,
   responsiveMode = "auto",
   selectableRows = false,
+  isRowSelectable,
   selectedRowKeys,
   defaultSelectedRowKeys = [],
   onSelectedRowKeysChange,
@@ -434,6 +435,7 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const handleToggleRow = (row: T, index: number) => {
+    if (isRowSelectable && !isRowSelectable(row, index)) return;
     const key = resolveRowKey(row, index);
     const exists = activeSelectedRowKeys.includes(key);
 
@@ -444,7 +446,11 @@ export function DataTable<T extends Record<string, unknown>>({
     );
   };
 
-  const allVisibleKeys = sortedData.map((row, index) => resolveRowKey(row, index));
+  const allVisibleKeys = sortedData.flatMap((row, index) =>
+    !isRowSelectable || isRowSelectable(row, index)
+      ? [resolveRowKey(row, index)]
+      : [],
+  );
   const allSelected =
     selectableRows &&
     allVisibleKeys.length > 0 &&
@@ -558,6 +564,10 @@ export function DataTable<T extends Record<string, unknown>>({
           animated={enableRowAnimations}
           visibleOnDesktop={responsiveMode === "cards"}
           rowClickable={isRowClickable}
+          selectableRows={selectableRows}
+          selectedRowKeys={activeSelectedRowKeys}
+          isRowSelectable={isRowSelectable}
+          onToggleRow={handleToggleRow}
           onRowClick={onRowClick}
           rowClassName={rowClassName}
           resolveRowKey={resolveRowKey}
@@ -592,7 +602,9 @@ export function DataTable<T extends Record<string, unknown>>({
                       <button
                         type="button"
                         onClick={handleToggleAllRows}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted"
+                        disabled={!allVisibleKeys.length}
+                        aria-label={allSelected ? "Deseleccionar todas las filas" : "Seleccionar todas las filas disponibles"}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         {allSelected ? (
                           <CheckSquare className="h-4 w-4" />
@@ -708,7 +720,9 @@ export function DataTable<T extends Record<string, unknown>>({
                             <button
                               type="button"
                               onClick={() => handleToggleRow(row, index)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted"
+                              disabled={isRowSelectable ? !isRowSelectable(row, index) : false}
+                              aria-label={isSelected ? "Deseleccionar fila" : "Seleccionar fila"}
+                              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-45"
                             >
                               {isSelected ? (
                                 <CheckSquare className="h-4 w-4" />
