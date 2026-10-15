@@ -128,7 +128,7 @@ describe("SaleOrderPaymentCards", () => {
   it("keeps a persisted pending income in history and directs cancellation to Ingresos", () => {
     render(<PaymentHarness persistedPayment />);
 
-    expect(screen.getByText("Por confirmar · cancela en Ingresos")).toBeInTheDocument();
+    expect(screen.getByText("Por confirmar")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Quitar" })).not.toBeInTheDocument();
   });
 

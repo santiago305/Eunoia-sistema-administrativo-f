@@ -542,9 +542,19 @@ export function SaleOrderEditor({
       ),
     [form.payments],
   );
+  const operationalPaid = useMemo(
+    () =>
+      form.payments.reduce(
+        (sum, payment) => payment.status === "POSTED" || payment.status === "PENDING_CONFIRMATION"
+          ? sum + Number(payment.amount || 0)
+          : sum,
+        0,
+      ),
+    [form.payments],
+  );
   const totalPaid = mode === "edit" && order
-    ? Number(order.totalApplied ?? order.totalPaid ?? totalReceived)
-    : totalReceived;
+    ? Number(order.totalApplied ?? order.totalPaid ?? operationalPaid)
+    : operationalPaid;
   const receivedAmount = mode === "edit" && order
     ? Number(order.totalReceived ?? totalReceived)
     : totalReceived;
