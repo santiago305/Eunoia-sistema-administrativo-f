@@ -41,6 +41,8 @@ import { useSaleOrderPaymentOptions, filterSaleOrderBankAccountOptions } from "@
 import { getIncomeEvidence, getIncomeEvidenceContent, uploadIncomeEvidence } from "@/shared/services/incomeService";
 import { DataTableSearchBar, DataTableSearchChips } from "@/shared/components/table/search";
 import { IncomeBulkPostingActions } from "./components/IncomeBulkPostingActions";
+import { SystemButton } from "@/shared/components/components/SystemButton";
+import { Landmark } from "lucide-react";
 import { buildIncomeSearchChips, normalizeIncomeSnapshot, removeIncomeRule, upsertIncomeRule } from "./utils/incomeSmartSearch";
 import { ExportPopover, type ExportColumn } from "@/shared/components/components/ExportPopover";
 import {
@@ -986,8 +988,16 @@ export default function IncomePage() {
         selectedRowKeys={selectedIncomeIds}
         onSelectedRowKeysChange={can("sale_orders.payments.post_bulk") && bulkSelectionMode ? handleSelectionChange : undefined}
         toolbarActions={<div className="flex flex-wrap items-center gap-2">
-          {can("income.reconciliation.view") ? <button type="button" className="min-h-10 rounded-md border border-sky-800 px-3 text-sm font-semibold text-sky-900 hover:bg-sky-50" onClick={() => setReconciliationReportOpen(true)}>Informe de conciliación</button> : null}
-          {can("income.export") ? <ExportPopover columns={INCOME_EXPORT_COLUMNS} loading={exporting} onExport={handleExportIncome} /> : null}
+          {can("income.reconciliation.view") ? <SystemButton
+            size="icon"
+            variant="primary"
+            className="h-11 w-11"
+            tooltip="Informe de conciliación"
+            aria-label="Informe de conciliación"
+            onClick={() => setReconciliationReportOpen(true)}
+            leftIcon={<Landmark className="h-4 w-4" aria-hidden="true" />}
+          /> : null}
+          {can("income.export") ? <ExportPopover columns={INCOME_EXPORT_COLUMNS} loading={exporting} onExport={handleExportIncome} buttonSize="icon" buttonClass="h-11 w-11" buttonVariant="primary" buttonLabel="" buttonTooltip="Exportar ingresos" /> : null}
           {can("sale_orders.payments.post_bulk") ? (
             <IncomeBulkPostingActions
               active={bulkSelectionMode}

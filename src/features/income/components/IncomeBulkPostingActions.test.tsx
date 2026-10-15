@@ -14,7 +14,7 @@ describe("IncomeBulkPostingActions", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Contabilizar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Contabilizar" })).toHaveClass("shadow-sm");
     expect(screen.queryByRole("button", { name: "Contabilizar pagos" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancelar selección" })).not.toBeInTheDocument();
   });

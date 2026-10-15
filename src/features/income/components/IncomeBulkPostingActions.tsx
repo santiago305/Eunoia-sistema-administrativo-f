@@ -22,7 +22,7 @@ export function IncomeBulkPostingActions({
     return (
       <SystemButton
         size="icon"
-        variant="outline"
+        variant="primary"
         className="h-11 w-11"
         tooltip="Contabilizar"
         aria-label="Contabilizar"
