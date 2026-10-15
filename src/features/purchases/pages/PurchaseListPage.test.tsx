@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Purchases from "./PurchaseListPage";
@@ -86,11 +86,13 @@ vi.mock("@/shared/components/table/DataTable", () => ({
         }>;
         selectableColumns?: boolean;
         toolbarSearchContent?: React.ReactNode;
+        toolbarActions?: React.ReactNode;
         rangeDates?: unknown;
         pagination?: { page: number; limit: number; total: number };
     }) => (
         <section data-testid="purchase-data-table" data-table-id={props.tableId}>
             {props.selectableColumns ? <span data-testid="selectable-columns" /> : null}
+            <div data-testid="table-toolbar-actions">{props.toolbarActions}</div>
             {props.rangeDates ? <span data-testid="date-range-filter" /> : null}
             {props.pagination ? (
                 <span data-testid="table-pagination">
@@ -306,6 +308,24 @@ describe("PurchaseListPage", () => {
                 from: undefined,
                 to: undefined,
             });
+        });
+    });
+
+    it("renders purchase actions inside the table toolbar", async () => {
+        getPurchaseExportColumnsMock.mockResolvedValueOnce([{ key: "poId", label: "Compra" }]);
+
+        render(
+            <MemoryRouter>
+                <Purchases />
+            </MemoryRouter>,
+        );
+
+        const toolbar = screen.getByTestId("table-toolbar-actions");
+
+        await waitFor(() => {
+            expect(within(toolbar).getByRole("button", { name: "Ver tipos de compra" })).toBeInTheDocument();
+            expect(within(toolbar).getByRole("button", { name: "Exportar" })).toBeInTheDocument();
+            expect(within(toolbar).getByRole("button", { name: "Nueva compra" })).toBeInTheDocument();
         });
     });
 

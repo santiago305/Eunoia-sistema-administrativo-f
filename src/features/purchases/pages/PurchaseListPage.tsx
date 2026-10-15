@@ -72,7 +72,6 @@ import { ExtraTimeModal } from "@/features/purchases/components/ExtraTimeModal";
 import { PurchaseCompletionPhotoModal } from "@/features/purchases/components/PurchaseCompletionPhotoModal";
 import { addPurchaseExtraTime, uploadPurchaseImageProdution } from "@/features/purchases/utils/purchaseActions";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { approvePayment as approvePaymentById } from "@/shared/services/paymentService";
 import { RoutesPaths } from "@/routes/config/routesPaths";
@@ -1395,44 +1394,6 @@ export default function Purchases() {
         <PageShell className="bg-white">
             <PageTitle title="Compras" />
             <div className="space-y-4">
-                <PageActionsRow>
-                    <SystemButton
-                        className="w-9"
-                        size="sm"
-                        variant="outline"
-                        leftIcon={<AlertCircle className="h-4 w-4" />}
-                        onClick={() => setOpenPurchaseTypesInfo(true)}
-                        aria-label="Ver tipos de compra"
-                    />
-                    {exportColumns.length ? (
-                        <ExportPopover
-                            columns={exportColumns}
-                            loading={exporting}
-                            presets={exportPresets}
-                            onSavePreset={handleSaveExportPreset}
-                            onDeletePreset={handleDeleteExportPreset}
-                            onExport={handleExport}
-                        />
-                    ) : null}
-                    <SystemButton
-                        size="sm"
-                        leftIcon={<Plus className="h-4 w-4" />}
-                        style={{
-                            backgroundColor: PRIMARY,
-                            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-                        }}
-                        onClick={() => {
-                            setEditPoId(undefined);
-                            setOpenPurchaseModal(true);
-                        }}
-                        disabled={companyActionDisabled || !canCreatePurchase}
-                        title={!canCreatePurchase ? "No tienes permiso para crear compras." : companyActionTitle}
-                    >
-                        Nueva compra
-                    </SystemButton>
-                </PageActionsRow>
-
                 <DataTableSearchChips
                     chips={searchChips}
                     onRemove={(chip) => handleRemoveChip(chip.removeKey)}
@@ -1448,6 +1409,53 @@ export default function Purchases() {
                     hoverable={false}
                     animated={false}
                     selectableColumns
+                    toolbarActions={
+                        <>
+                            <SystemButton
+                                size="icon"
+                                variant="outline"
+                                className="rounded-md h-11 shadow"
+                                tooltip="Información"
+                                leftIcon={<AlertCircle className="h-4 w-4" />}
+                                onClick={() => setOpenPurchaseTypesInfo(true)}
+                                aria-label="Ver tipos de compra"
+                                title="Ver tipos de compra"
+                            />
+                            {exportColumns.length ? (
+                                <ExportPopover
+                                    buttonLabel=""
+                                    buttonSize="icon"
+                                    buttonClass="h-11 shadow"
+                                    buttonTooltip="Exportar"
+                                    buttonVariant="outline"
+                                    columns={exportColumns}
+                                    loading={exporting}
+                                    presets={exportPresets}
+                                    onSavePreset={handleSaveExportPreset}
+                                    onDeletePreset={handleDeleteExportPreset}
+                                    onExport={handleExport}
+                                />
+                            ) : null}
+                            <SystemButton
+                                size="icon"
+                                className="rounded-md h-11 shadow"
+                                tooltip="Nueva compra"
+                                leftIcon={<Plus className="h-4 w-4" />}
+                                style={{
+                                    backgroundColor: PRIMARY,
+                                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                                    boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+                                }}
+                                onClick={() => {
+                                    setEditPoId(undefined);
+                                    setOpenPurchaseModal(true);
+                                }}
+                                disabled={companyActionDisabled || !canCreatePurchase}
+                                aria-label="Nueva compra"
+                                title={!canCreatePurchase ? "No tienes permiso para crear compras." : companyActionTitle}
+                            />
+                        </>
+                    }
                     toolbarSearchContent={
                         <DataTableSearchBar
                             value={searchText}
