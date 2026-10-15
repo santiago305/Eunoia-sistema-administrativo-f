@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
+import { SystemButton } from "@/shared/components/components/SystemButton";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { successResponse } from "@/shared/common/utils/response";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -21,6 +24,7 @@ import {
 } from "@/shared/services/incomeService";
 import type { Income } from "../types/income.types";
 import { createIdempotencyKey } from "@/shared/utils/idempotencyKey";
+import { parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import {
   clearPendingIncomeOperation,
   listPendingIncomeOperations,
@@ -292,12 +296,12 @@ export function IncomeReconciliationModal({ open, income, canReconcile, canUnrec
       preventClose={submitting} closeOnOverlayClick={!submitting} closeOnEscape={!submitting}
       className="max-h-[90vh] w-[min(760px,calc(100vw-24px))]" bodyClassName="space-y-4 overflow-y-auto">
       {loading ? <div role="status" className="py-8 text-center text-sm text-zinc-700">Cargando conciliación…</div> : <>
-        {error && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-300 bg-rose-50 p-3"><p role="alert" className="text-sm text-rose-900">{error}</p><button type="button" onClick={() => { void load(); void loadLines(); }} disabled={submitting || loading} className="min-h-11 rounded-lg border border-rose-700 bg-white px-3 text-sm font-semibold text-rose-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 disabled:cursor-not-allowed disabled:opacity-50">Reintentar</button></div>}
+        {error && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-300 bg-rose-50 p-3"><p role="alert" className="text-sm text-rose-900">{error}</p><SystemButton type="button" variant="outline" onClick={() => { void load(); void loadLines(); }} disabled={submitting || loading} className="border-rose-700 text-rose-900 hover:bg-rose-50">Reintentar</SystemButton></div>}
         {pendingOperations.length > 0 && <section aria-label="Operaciones por recuperar" className="space-y-3 rounded-lg border border-amber-400 bg-amber-50 p-4">
           <p className="text-sm leading-6 text-amber-950">Hay una operación cuyo resultado no se confirmó. Recuperarla reenvía exactamente la misma solicitud y clave; si ya se guardó, el servidor devuelve el resultado sin duplicar asignaciones.</p>
           {pendingOperations.map((operation) => <div key={operation.operationId} className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-sm font-semibold text-amber-950">{operation.kind === "bank-line.create" ? "Registrar línea bancaria" : operation.kind === "income.reconcile" ? "Conciliar ingreso" : "Desconciliar ingreso"}</span>
-            <button type="button" onClick={() => void recoverOperation(operation)} disabled={submitting} className="min-h-11 rounded-lg border border-amber-900 bg-white px-4 text-sm font-semibold text-amber-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-900 disabled:opacity-50">{submitting ? "Recuperando…" : "Recuperar operación pendiente"}</button>
+            <SystemButton type="button" variant="outline" onClick={() => void recoverOperation(operation)} disabled={submitting} className="border-amber-900 text-amber-950 hover:bg-amber-100">{submitting ? "Recuperando…" : "Recuperar operación pendiente"}</SystemButton>
           </div>)}
         </section>}
         {income && <div className="grid gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:grid-cols-3">
@@ -308,17 +312,25 @@ export function IncomeReconciliationModal({ open, income, canReconcile, canUnrec
         {canReconcile && <section className="space-y-3 rounded-xl border border-zinc-200 p-4">
           <div><h3 className="text-sm font-semibold text-zinc-950">Conciliar con una línea bancaria</h3><p className="mt-1 text-sm text-zinc-700">La conciliación no cambia el estado ni el importe contable del ingreso.</p></div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium text-zinc-900">Cuenta receptora
-              <select value={accountId} onChange={(event) => { setAccountId(event.target.value); setLineId(""); }} className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700">
-                <option value="">Selecciona una cuenta</option>{eligibleAccounts.map((account) => <option key={account.id} value={account.id}>{getCompanyPaymentAccountDisplay(account)}</option>)}
-              </select>
-            </label>
-            <label className="text-sm font-medium text-zinc-900">Línea bancaria disponible
-              <select value={lineId} onChange={(event) => { setLineId(event.target.value); const line = lines.find((item) => item.id === event.target.value); setAllocationAmount(line ? Math.min(amount(line.available), Math.max((income?.amount ?? 0) - reconciledAmount, 0)).toFixed(2) : ""); }} className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700">
-                <option value="">Selecciona una línea bancaria</option>{lines.map((line) => <option key={line.id} value={line.id}>{line.bankReference} · {line.operationDate} · disponible {currency(amount(line.available), line.currency)}</option>)}
-              </select>
+            <FloatingSelect
+              label="Cuenta receptora"
+              name="income-reconciliation-account"
+              value={accountId}
+              options={[{ value: "", label: "Selecciona una cuenta" }, ...eligibleAccounts.map((account) => ({ value: account.id, label: getCompanyPaymentAccountDisplay(account) }))]}
+              onChange={(value) => { setAccountId(value); setLineId(""); }}
+              disabled={eligibleAccounts.length === 0}
+            />
+            <div>
+              <FloatingSelect
+                label="Línea bancaria disponible"
+                name="income-reconciliation-line"
+                value={lineId}
+                options={[{ value: "", label: "Selecciona una línea bancaria" }, ...lines.map((line) => ({ value: line.id, label: `${line.bankReference} · ${line.operationDate} · disponible ${currency(amount(line.available), line.currency)}` }))]}
+                onChange={(value) => { setLineId(value); const line = lines.find((item) => item.id === value); setAllocationAmount(line ? Math.min(amount(line.available), Math.max((income?.amount ?? 0) - reconciledAmount, 0)).toFixed(2) : ""); }}
+                disabled={lines.length === 0}
+              />
               {lineAccountLabel && <span className="mt-1 block text-xs font-normal text-zinc-700">{lineAccountLabel.maskedLabel} · {code}</span>}
-            </label>
+            </div>
           </div>
           {eligibleAccounts.length === 0 && <p className="text-sm text-zinc-700">Este ingreso no tiene una cuenta receptora activa compatible asociada. No se pueden registrar ni vincular líneas bancarias hasta corregir la cuenta del ingreso.</p>}
           {lines.length === 0 && <p className="text-sm text-zinc-700">No hay líneas bancarias con saldo disponible para esta cuenta.</p>}
@@ -326,7 +338,7 @@ export function IncomeReconciliationModal({ open, income, canReconcile, canUnrec
             <label className="min-w-40 flex-1 text-sm font-medium text-zinc-900">Importe a conciliar ({code})
               <input type="number" min="0.01" max={Math.min(amount(lines.find((line) => line.id === lineId)?.available), Math.max((income?.amount ?? 0) - reconciledAmount, 0))} step="0.01" value={allocationAmount} onChange={(event) => { setAllocationAmount(event.target.value); idempotencyRef.current = null; }} className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700" />
             </label>
-            <button type="button" onClick={() => void submitReconciliation()} disabled={!lineId || !allocationAmount || submitting || pendingOperations.length > 0 || reconciledAmount >= (income?.amount ?? 0)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-sky-800 px-4 text-sm font-semibold text-white hover:bg-sky-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800 disabled:cursor-not-allowed disabled:opacity-50">{submitting && <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />}Conciliar importe</button>
+            <SystemButton type="button" onClick={() => void submitReconciliation()} loading={submitting} disabled={!lineId || !allocationAmount || pendingOperations.length > 0 || reconciledAmount >= (income?.amount ?? 0)}>Conciliar importe</SystemButton>
           </div>}
           <details className="rounded-lg border border-zinc-200 p-3">
             <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-zinc-900">Registrar una línea bancaria manualmente</summary>
@@ -334,13 +346,16 @@ export function IncomeReconciliationModal({ open, income, canReconcile, canUnrec
               <label className="text-sm font-medium text-zinc-900">Referencia bancaria
                 <input value={bankReference} maxLength={120} onChange={(event) => setBankReference(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700" />
               </label>
-              <label className="text-sm font-medium text-zinc-900">Fecha de operación
-                <input type="date" value={operationDate} onChange={(event) => setOperationDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700" />
-              </label>
+              <FloatingDatePicker
+                label="Fecha de operación"
+                name="income-reconciliation-operation-date"
+                value={parseDateInputValue(operationDate)}
+                onChange={(date) => setOperationDate(date ? toLocalDateKey(date) : "")}
+              />
               <label className="text-sm font-medium text-zinc-900">Importe de la línea ({code})
                 <input type="number" min="0.01" step="0.01" value={statementAmount} onChange={(event) => setStatementAmount(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 px-3 text-sm tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700" />
               </label>
-              <button type="button" onClick={() => void submitLine()} disabled={!accountId || !bankReference.trim() || !statementAmount || submitting || pendingOperations.length > 0} className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-lg border border-sky-800 px-4 text-sm font-semibold text-sky-900 hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800 disabled:cursor-not-allowed disabled:opacity-50">{submitting && <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />}Registrar línea</button>
+              <SystemButton type="button" variant="outline" onClick={() => void submitLine()} loading={submitting} disabled={!accountId || !bankReference.trim() || !statementAmount || pendingOperations.length > 0} className="self-end border-sky-800 text-sky-900 hover:bg-sky-50">Registrar línea</SystemButton>
             </div>
           </details>
         </section>}
@@ -350,13 +365,13 @@ export function IncomeReconciliationModal({ open, income, canReconcile, canUnrec
             <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold text-zinc-950">{allocation.bankReference} · {currency(amount(allocation.amount), allocation.currency)}</p><p className="mt-1 text-sm text-zinc-700">Fecha bancaria: {allocation.operationDate} · Cuenta: {accountLabel(allocation.companyPaymentAccountId)}</p></div>
               {activeAllocationIds.has(allocation.id) ? <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900">Activa</span> : <span className="rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-800">Desconciliada</span>}</div>
             {allocation.unreconciledAt && <p className="text-sm text-zinc-700">Motivo: {allocation.unreconcileReason || "No registrado"}</p>}
-            {canUnreconcile && activeAllocationIds.has(allocation.id) && <button type="button" disabled={pendingOperations.length > 0} onClick={() => { setUnreconcileDraft({ id: allocation.id, reason: "", confirmed: false }); setError(""); }} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-rose-400 px-3 text-sm font-semibold text-rose-900 hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 disabled:opacity-50"><RotateCcw aria-hidden="true" className="h-4 w-4" />Desconciliar</button>}
+            {canUnreconcile && activeAllocationIds.has(allocation.id) && <SystemButton type="button" variant="outline" disabled={pendingOperations.length > 0} onClick={() => { setUnreconcileDraft({ id: allocation.id, reason: "", confirmed: false }); setError(""); }} className="border-rose-400 text-rose-900 hover:bg-rose-50" leftIcon={<RotateCcw aria-hidden="true" className="h-4 w-4" />}>Desconciliar</SystemButton>}
             {unreconcileDraft?.id === allocation.id && <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
               <label className="block text-sm font-medium text-zinc-900">Motivo de desconciliación
                 <textarea value={unreconcileDraft.reason} minLength={5} maxLength={500} rows={2} onChange={(event) => setUnreconcileDraft({ ...unreconcileDraft, reason: event.target.value })} className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700" />
               </label>
               <label className="flex min-h-11 items-start gap-3 text-sm text-zinc-900"><input type="checkbox" checked={unreconcileDraft.confirmed} onChange={(event) => setUnreconcileDraft({ ...unreconcileDraft, confirmed: event.target.checked })} className="mt-1 h-4 w-4 accent-amber-800" /><span>Confirmo retirar esta asignación. La operación quedará registrada en el historial.</span></label>
-              <div className="flex flex-wrap gap-2"><button type="button" disabled={submitting} onClick={() => setUnreconcileDraft(null)} className="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-800">Cancelar</button><button type="button" disabled={submitting || !unreconcileDraft.confirmed || unreconcileDraft.reason.trim().length < 5} onClick={() => void submitUnreconciliation()} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-rose-800 px-3 text-sm font-semibold text-white hover:bg-rose-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-800 disabled:cursor-not-allowed disabled:opacity-50">{submitting && <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />}Confirmar desconciliación</button></div>
+              <div className="flex flex-wrap gap-2"><SystemButton type="button" variant="outline" disabled={submitting} onClick={() => setUnreconcileDraft(null)}>Cancelar</SystemButton><SystemButton type="button" variant="danger" loading={submitting} disabled={!unreconcileDraft.confirmed || unreconcileDraft.reason.trim().length < 5} onClick={() => void submitUnreconciliation()}>Confirmar desconciliación</SystemButton></div>
             </div>}
           </div>)}
         </section>

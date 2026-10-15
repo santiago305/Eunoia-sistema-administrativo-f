@@ -54,11 +54,11 @@ describe("IncomeTable posted correction action", () => {
     const posted = { ...pendingIncome, status: "POSTED" as const };
     const onCorrect = vi.fn();
     const { rerender } = render(<IncomeTable rows={[posted]} canCorrectPosted onCorrect={onCorrect} />);
-    fireEvent.click(screen.getByRole("button", { name: "Corregir ingreso contabilizado" }));
+    fireEvent.click(screen.getByRole("button", { name: "Corregir ingreso" }));
     expect(onCorrect).toHaveBeenCalledWith(posted);
 
     rerender(<IncomeTable rows={[posted]} canCorrectPosted={false} onCorrect={onCorrect} />);
-    expect(screen.queryByRole("button", { name: "Corregir ingreso contabilizado" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Corregir ingreso" })).not.toBeInTheDocument();
   });
 
   it("offers evidence recovery for an already-corrected posted payment without creating a second correction", () => {
@@ -80,7 +80,7 @@ describe("IncomeTable unknown financial state", () => {
     expect(screen.getByText("No aplica")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ver reembolsos" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Conciliación bancaria" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Corregir ingreso contabilizado" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Corregir ingreso" })).not.toBeInTheDocument();
   });
 
   it("treats legacy VOIDED as unclassified and does not offer re-entry", () => {

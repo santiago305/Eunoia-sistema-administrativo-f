@@ -262,7 +262,7 @@ export function IncomeTable({
           const actions = [
             { id: "view", label: "Ver detalle", description: "Consultar datos y evidencia", icon: <Image className="h-4 w-4" />, hidden: false, onClick: () => onEvidence?.(row) },
             { id: "edit", label: "Editar ingreso", description: "Modificar datos y evidencia mientras está por confirmar", icon: <Pencil className="h-4 w-4" />, hidden: !pending || !canEditPending, onClick: () => onEdit?.(row) },
-            { id: "correct", label: "Corregir ingreso contabilizado", description: "Revertir el registro y crear su versión corregida", icon: <Pencil className="h-4 w-4" />, hidden: !posted || !canCorrectPosted, onClick: () => onCorrect?.(row) },
+            { id: "correct", label: "Corregir ingreso", description: "Revertir el registro y crear su versión corregida", icon: <Pencil className="h-4 w-4" />, hidden: !posted || !canCorrectPosted, onClick: () => onCorrect?.(row) },
             { id: "corrected-evidence", label: "Actualizar evidencia corregida", description: "Adjuntar o reemplazar evidencia sin volver a contabilizar", icon: <Image className="h-4 w-4" />, hidden: !posted || !row.correctedFromPaymentId || !canReplaceCorrectedEvidence, onClick: () => onCorrect?.(row) },
             { id: "transfer", label: "Transferir a otro pedido", description: "Mover el pago pendiente a otro pedido del mismo cliente y moneda", icon: <ArrowRightLeft className="h-4 w-4" />, hidden: !pending || !canTransferPending, onClick: () => onTransfer?.(row) },
             { id: "post", label: "Contabilizar", description: "Validar y confirmar este ingreso", icon: <CheckCircle2 className="h-4 w-4" />, hidden: !pending || !canPost, onClick: () => onPost?.(row) },

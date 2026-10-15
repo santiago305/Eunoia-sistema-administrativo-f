@@ -9,6 +9,8 @@ const { listLines, listReconciliations, createLine, reconcile, unreconcile, list
 }));
 
 vi.mock("@/shared/components/modales/Modal", () => ({ Modal: ({ open, title, description, children }: { open: boolean; title: string; description?: string; children?: ReactNode }) => open ? <div role="dialog" aria-label={title}><p>{description}</p>{children}</div> : null }));
+vi.mock("@/shared/components/components/FloatingSelect", () => ({ FloatingSelect: ({ label, name, value, options, onChange, disabled }: any) => <label>{label}<select aria-label={label} name={name} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> }));
+vi.mock("@/shared/components/components/date-picker/FloatingDatePicker", () => ({ FloatingDatePicker: ({ label, name, value, onChange }: any) => <label>{label}<input aria-label={label} name={name} type="date" value={value ? value.toISOString().slice(0, 10) : ""} onChange={(event) => onChange(event.target.value ? new Date(`${event.target.value}T12:00:00`) : null)} /></label> }));
 vi.mock("@/shared/hooks/useCompany", () => ({ useCompany: () => ({ company: { companyId: "company-1" } }) }));
 vi.mock("@/shared/hooks/useAuth", () => ({ useAuth: () => ({ userId: "user-1" }) }));
 vi.mock("@/shared/hooks/useFeedbackToast", () => ({ useFeedbackToast: () => ({ showFeedback }) }));

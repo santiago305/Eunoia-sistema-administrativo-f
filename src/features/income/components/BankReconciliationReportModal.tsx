@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import { LoaderCircle } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { AnimatedDateRangePicker } from "@/shared/components/components/date-picker/AnimatedDateRangePicker";
+import { SystemButton } from "@/shared/components/components/SystemButton";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { listCompanyPaymentAccountsByCompany } from "@/shared/services/companyPaymentAccountService";
 import { getCompanyPaymentAccountDisplay } from "@/features/payments/paymentAccountView";
 import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
 import { getBankReconciliationReport, type BankReconciliationReport } from "@/shared/services/incomeService";
+import { parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 
 type Props = { open: boolean; onClose: () => void };
 const dateDefaults = () => {
@@ -45,11 +48,28 @@ export function BankReconciliationReportModal({ open, onClose }: Props) {
     <div className="space-y-4">
       <p className="text-sm text-zinc-700">Compara los movimientos bancarios con los ingresos contabilizados. Los totales se separan por moneda.</p>
       <div className="grid gap-3 sm:grid-cols-4">
-        <label className="text-sm font-medium">Desde<input aria-label="Desde" type="date" value={dates.from} onChange={(event) => setDates((current) => ({ ...current, from: event.target.value }))} className="mt-1 min-h-11 w-full rounded-lg border px-3" /></label>
-        <label className="text-sm font-medium">Hasta<input aria-label="Hasta" type="date" value={dates.to} onChange={(event) => setDates((current) => ({ ...current, to: event.target.value }))} className="mt-1 min-h-11 w-full rounded-lg border px-3" /></label>
-        <label className="text-sm font-medium sm:col-span-2">Cuenta receptora<select aria-label="Cuenta receptora" value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border bg-white px-3"><option value="">Todas las cuentas</option>{accounts.map((account) => <option key={account.id} value={account.id}>{getCompanyPaymentAccountDisplay(account)}</option>)}</select></label>
+        <div className="sm:col-span-2">
+          <AnimatedDateRangePicker
+            label="Desde / Hasta"
+            name="reconciliation-report-period"
+            startDate={parseDateInputValue(dates.from)}
+            endDate={parseDateInputValue(dates.to)}
+            onChange={({ startDate, endDate }) => setDates({ from: startDate ? toLocalDateKey(startDate) : "", to: endDate ? toLocalDateKey(endDate) : "" })}
+            containerClassName="w-full"
+            className="h-11 w-full justify-start rounded-md border-border/70 px-3 text-xs shadow-sm"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <FloatingSelect
+            label="Cuenta receptora"
+            name="reconciliation-report-account"
+            value={accountId}
+            options={[{ value: "", label: "Todas las cuentas" }, ...accounts.map((account) => ({ value: account.id, label: getCompanyPaymentAccountDisplay(account) }))]}
+            onChange={setAccountId}
+          />
+        </div>
       </div>
-      <button type="button" onClick={() => void load()} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-sky-800 px-4 font-semibold text-white disabled:opacity-50">{loading && <LoaderCircle className="h-4 w-4 animate-spin" />}{loading ? "Consultando…" : "Generar informe"}</button>
+      <SystemButton type="button" onClick={() => void load()} loading={loading}>{loading ? "Consultando…" : "Generar informe"}</SystemButton>
       {error && <p role="alert" className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900">{error}</p>}
       {report && <>
         {report.truncated && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">Se muestran las primeras 2,000 líneas. Acota el periodo para ver el informe completo.</p>}

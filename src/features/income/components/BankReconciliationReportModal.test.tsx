@@ -4,6 +4,8 @@ import { BankReconciliationReportModal } from "./BankReconciliationReportModal";
 
 const { getReport, listAccounts } = vi.hoisted(() => ({ getReport: vi.fn(), listAccounts: vi.fn() }));
 vi.mock("@/shared/components/modales/Modal", () => ({ Modal: ({ open, title, children }: any) => open ? <div role="dialog" aria-label={title}>{children}</div> : null }));
+vi.mock("@/shared/components/components/FloatingSelect", () => ({ FloatingSelect: ({ label, name, value, options, onChange }: any) => <label>{label}<select aria-label={label} name={name} value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> }));
+vi.mock("@/shared/components/components/date-picker/AnimatedDateRangePicker", () => ({ AnimatedDateRangePicker: ({ label, name, startDate, endDate }: any) => <div aria-label={label} data-name={name}>{startDate?.toISOString().slice(0, 10)} / {endDate?.toISOString().slice(0, 10)}</div> }));
 vi.mock("@/shared/hooks/useCompany", () => ({ useCompany: () => ({ company: { companyId: "company-1" } }) }));
 vi.mock("@/shared/services/companyPaymentAccountService", () => ({ listCompanyPaymentAccountsByCompany: listAccounts }));
 vi.mock("@/features/payments/paymentAccountView", () => ({ getCompanyPaymentAccountDisplay: () => "Cuenta PEN" }));
