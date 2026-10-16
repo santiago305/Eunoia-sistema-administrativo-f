@@ -112,16 +112,8 @@ function PaymentHarness({ persistedPayment = false, persistedStatus = "PENDING_C
 }
 
 describe("SaleOrderPaymentCards", () => {
-  it("shows evidence history only when financial read, audit, evidence and scope permissions are present", async () => {
+  it("does not show evidence history in the sale order payment modal", async () => {
     permissions.splice(0, permissions.length, "income.read", "income.audit.view", "payments.view_evidence", "income.view_own");
-    getRevisions.mockResolvedValueOnce([]);
-    const { unmount } = render(<PaymentHarness persistedPayment />);
-    await userEvent.setup().click(screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }));
-    await waitFor(() => expect(getRevisions).toHaveBeenCalledWith("income-1", 50));
-    expect(screen.getByText("Historial de evidencias")).toBeInTheDocument();
-    unmount();
-
-    permissions.splice(0, permissions.length, "income.read", "payments.view_evidence", "income.view_own");
     getRevisions.mockClear();
     render(<PaymentHarness persistedPayment />);
     await userEvent.setup().click(screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }));

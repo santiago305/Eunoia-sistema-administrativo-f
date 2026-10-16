@@ -62,6 +62,12 @@ describe("SaleIncomeModal", () => {
       expect(screen.queryByRole("button", { name: "Guardar cambios" })).not.toBeInTheDocument();
     });
 
+  it("leaves empty operation and description fields blank", () => {
+    renderModal("edit-pending", { values: { ...values, operationNumber: "", note: "" } });
+    expect(screen.getByLabelText(/operación/i)).toHaveValue("");
+    expect(screen.getByLabelText(/descripción/i)).toHaveValue("");
+  });
+
   it.each([
     ["create", "Guardar pago"], ["edit-pending", "Guardar cambios"],
     ["correct-posted", "Corregir ingreso"], ["reenter", "Crear ingreso por confirmar"],

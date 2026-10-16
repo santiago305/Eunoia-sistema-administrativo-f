@@ -11,7 +11,6 @@ import type { SaleOrderEditorForm, SaleOrderEditorPayment } from "./saleOrderEdi
 import { calculateSaleOrderTotals, markAttachmentRemoved } from "./saleOrderEditorForm";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
 import { CustomerCreditApplyPanel } from "./CustomerCreditApplyPanel";
-import { SaleOrderPaymentEvidenceHistory } from "./SaleOrderPaymentEvidenceHistory";
 
 type Props = {
   form: SaleOrderEditorForm;
@@ -36,13 +35,10 @@ export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMe
   const fallbackOptions = useSaleOrderPaymentOptions({ enabled: shouldLoadPaymentOptions });
   const methodOptions = providedMethodOptions ?? fallbackOptions.methodOptions;
   const bankAccountOptions = providedBankAccountOptions ?? fallbackOptions.bankAccountOptions;
-  const { can, canAll, canAny } = usePermissions();
+  const { can } = usePermissions();
   const [modalState, setModalState] = useState<PaymentModalState | null>(null);
   const [evidenceUrl, setEvidenceUrl] = useState<string | null>(null);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
-  const canViewEvidenceHistory = (can("*") || canAll(["income.read", "income.audit.view", "payments.view_evidence"]))
-    && (can("*") || canAny(["income.view_all", "income.view_own"]));
-
   useEffect(() => {
     let active = true;
     let objectUrl: string | null = null;
@@ -151,7 +147,6 @@ export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMe
       evidenceUrl={evidenceUrl} evidenceLoading={evidenceLoading} canViewEvidence={can("payments.view_evidence")} canUploadEvidence={modalState?.mode !== "view" && can("payments.attach_evidence")}
       methodOptions={methodOptions} bankAccountOptions={bankAccountOptions} getCompatibleAccounts={filterSaleOrderBankAccountOptions}
       errorMessage={amountError} maxAmount={availableForDraft} onClose={() => setModalState(null)} onSubmit={saveDraft}
-      extraContent={modalState?.draft.id && canViewEvidenceHistory ? <SaleOrderPaymentEvidenceHistory incomeId={modalState.draft.id} /> : null}
       submitLabel="Guardar pago" operationLabel="Operacion" fieldPrefix="payment" fieldSuffix={modalState?.draft.clientKey ?? ""} skipRequiredValidation
     />
   </SaleOrderEditorSection>;
