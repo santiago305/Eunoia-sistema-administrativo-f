@@ -300,6 +300,7 @@ export function mapSaleOrderToEditorForm(
         amount: Number(payment.amount ?? 0),
         date: payment.date?.slice(0, 10),
         operationNumber: payment.operationNumber,
+        operationCode: payment.operationCode ?? null,
         note: payment.note,
         photo: null,
         existingPhotoUrl:

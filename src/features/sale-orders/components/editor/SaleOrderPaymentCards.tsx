@@ -28,6 +28,7 @@ type Props = {
 
 type PaymentModalState = { mode: "create" | "edit" | "view"; index: number | null; draft: SaleOrderEditorPayment };
 const nextClientKey = () => typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `payment-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMethodOptions, bankAccountOptions: providedBankAccountOptions, saleOrderId, persistedClientId, currency = "PEN", remainingAmount = 0, hasUnsavedChanges = false, onCreditApplied }: Props) {
@@ -94,6 +95,10 @@ export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMe
       sileo.error({ title: `El monto no puede superar el saldo disponible de ${money.format(availableForDraft)}.` });
       return;
     }
+    if (!UUID_PATTERN.test(values.paymentMethodId) || !UUID_PATTERN.test(values.companyPaymentAccountId)) {
+      sileo.error({ title: "Selecciona un metodo y una cuenta validos del catalogo." });
+      return;
+    }
     const selectedMethod = methodOptions.find((option) => option.value === values.paymentMethodId);
     const nextDraft: SaleOrderEditorPayment = {
       ...modalState.draft,
@@ -142,7 +147,7 @@ export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMe
       mode={modalState?.mode === "view"
         ? modalState.draft.status === "POSTED" ? "view-posted" : "view-unknown"
         : modalState?.mode === "edit" ? "edit-pending" : "create"}
-      values={modalState ? { id: modalState.draft.id, version: modalState.draft.version, amount: modalState.draft.amount, date: modalState.draft.date ?? "", paymentMethodId: modalState.draft.paymentMethodId ?? modalState.draft.method, companyPaymentAccountId: modalState.draft.companyPaymentAccountId ?? modalState.draft.bankAccountId ?? "", operationNumber: modalState.draft.operationNumber ?? "", note: modalState.draft.note ?? "", reason: "", status: modalState.draft.status } : null}
+      values={modalState ? { id: modalState.draft.id, version: modalState.draft.version, amount: modalState.draft.amount, date: modalState.draft.date ?? "", paymentMethodId: modalState.draft.paymentMethodId ?? "", companyPaymentAccountId: modalState.draft.companyPaymentAccountId ?? modalState.draft.bankAccountId ?? "", operationNumber: modalState.draft.operationNumber ?? "", note: modalState.draft.note ?? "", reason: "", status: modalState.draft.status } : null}
       evidenceUrl={evidenceUrl} evidenceLoading={evidenceLoading} canViewEvidence={can("payments.view_evidence")} canUploadEvidence={modalState?.mode !== "view" && can("payments.attach_evidence")}
       methodOptions={methodOptions} bankAccountOptions={bankAccountOptions} getCompatibleAccounts={filterSaleOrderBankAccountOptions}
       errorMessage={amountError} maxAmount={availableForDraft} onClose={() => setModalState(null)} onSubmit={saveDraft}

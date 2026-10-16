@@ -15,6 +15,9 @@ const { sileoError, permissions, getRevisions, getRevisionContent } = vi.hoisted
   getRevisionContent: vi.fn(),
 }));
 
+const paymentMethodId = "11111111-1111-4111-8111-111111111111";
+const paymentAccountId = "22222222-2222-4222-8222-222222222222";
+
 vi.mock("sileo", () => ({
   sileo: {
     error: sileoError,
@@ -36,8 +39,8 @@ vi.mock("@/shared/services/incomeService", async (importOriginal) => ({
 vi.mock("../useSaleOrderPaymentOptions", () => ({
   filterSaleOrderBankAccountOptions: (accounts: unknown[]) => accounts,
   useSaleOrderPaymentOptions: () => ({
-    methodOptions: [{ value: "EFECTIVO", label: "EFECTIVO" }],
-    bankAccountOptions: [{ value: "account-1", label: "BCP 123" }],
+    methodOptions: [{ value: "11111111-1111-4111-8111-111111111111", label: "EFECTIVO" }],
+    bankAccountOptions: [{ value: "22222222-2222-4222-8222-222222222222", label: "BCP 123" }],
   }),
 }));
 
@@ -87,7 +90,9 @@ function PaymentHarness({ persistedPayment = false, persistedStatus = "PENDING_C
       {
         ...(persistedPayment ? { id: "income-1", version: 1, ...(persistedStatus ? { status: persistedStatus } : {}) } : {}),
         clientKey: "payment-1",
-        bankAccountId: "account-1",
+        bankAccountId: paymentAccountId,
+        companyPaymentAccountId: paymentAccountId,
+        paymentMethodId,
         method: "EFECTIVO",
         amount: 10,
         date: "2026-07-06",
