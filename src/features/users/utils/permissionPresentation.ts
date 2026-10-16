@@ -20,6 +20,44 @@ export type PermissionGroup = {
   permissions: PresentedPermission[];
 };
 
+/**
+ * Permisos que forman parte de la experiencia financiera de Ingresos.
+ * Algunos conservan un prefijo técnico histórico (sale_orders/payments o
+ * payments), por lo que se agrupan aquí sin cambiar sus códigos ni sus
+ * asignaciones.
+ */
+export const INCOME_PERMISSION_CODES = new Set([
+  "page.income.view",
+  "income.read",
+  "income.view_own",
+  "income.view_all",
+  "income.export",
+  "sale_orders.payments.update_pending",
+  "sale_orders.payments.post",
+  "sale_orders.payments.post_bulk",
+  "sale_orders.payments.post_own",
+  "sale_orders.payments.post_high_value",
+  "sale_orders.payments.cancel_pending",
+  "sale_orders.payments.transfer_pending",
+  "sale_orders.payments.reverse_posted",
+  "sale_orders.payments.correct_posted",
+  "sale_orders.payments.reenter_closed",
+  "payments.view_evidence",
+  "payments.attach_evidence",
+  "income.reconciliation.view",
+  "income.reconciliation.reconcile",
+  "income.reconciliation.unreconcile",
+  "income.audit.view",
+  "income.scope.manage",
+  "income.evidence.quarantine.manage",
+  "income.outbox.manage",
+]);
+
+const INCOME_PERMISSION_LABELS: Record<string, string> = {
+  "payments.view_evidence": "Ver comprobantes de ingresos",
+  "payments.attach_evidence": "Adjuntar comprobantes de ingresos",
+};
+
 const MODULE_LABELS: Record<string, string> = {
   advisers: "Asesores",
   dashboard: "Dashboard",
@@ -55,6 +93,7 @@ const MODULE_LABELS: Record<string, string> = {
   corporate: "Sistema",
   system: "Sistema",
   general: "General",
+  income: "Ingresos",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -73,6 +112,9 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const normalizeModuleKey = (module?: string | null) => module?.trim() || "general";
+
+export const getPermissionGroupModule = (permission: Pick<AccessPermissionItem, "code" | "module">) =>
+  INCOME_PERMISSION_CODES.has(permission.code) ? "income" : normalizeModuleKey(permission.module);
 
 const prettifyCodePart = (value: string) =>
   formatDisplayLabel(value.replace(/^page\./, ""));
@@ -124,12 +166,14 @@ export const buildUserPermissionGroups = ({
   const grouped = new Map<string, PresentedPermission[]>();
 
   permissions.forEach((permission) => {
-    const module = normalizeModuleKey(permission.module);
+    const module = getPermissionGroupModule(permission);
     const current = grouped.get(module) ?? [];
     current.push({
       ...permission,
       state: getPermissionState(permission.code, effectivePermissions, overrides),
-      label: getPermissionLabel(permission),
+      label: module === "income"
+        ? INCOME_PERMISSION_LABELS[permission.code] ?? getPermissionLabel(permission)
+        : getPermissionLabel(permission),
       helper: permission.description?.trim() || `Controla ${permission.code}`,
     });
     grouped.set(module, current);

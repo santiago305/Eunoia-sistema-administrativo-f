@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AccessPermissionItem, UserPermissionOverride } from "@/shared/services/accessControlService";
 import {
   buildUserPermissionGroups,
+  getPermissionGroupModule,
   getPermissionModuleLabel,
   getPermissionState,
 } from "./permissionPresentation";
@@ -37,6 +38,47 @@ describe("permissionPresentation", () => {
     expect(getPermissionModuleLabel("accounts_payable")).toBe("Cuentas por pagar");
     expect(getPermissionModuleLabel("agencies")).toBe("Agencias");
     expect(getPermissionModuleLabel("payment_accounts")).toBe("Cuentas de pago");
+    expect(getPermissionModuleLabel("income")).toBe("Ingresos");
+  });
+
+  it("groups the complete income permission set under the Spanish Ingresos module", () => {
+    const codes = [
+      "page.income.view",
+      "income.read",
+      "income.view_own",
+      "income.view_all",
+      "income.export",
+      "sale_orders.payments.update_pending",
+      "sale_orders.payments.post",
+      "sale_orders.payments.post_bulk",
+      "sale_orders.payments.post_own",
+      "sale_orders.payments.post_high_value",
+      "sale_orders.payments.cancel_pending",
+      "sale_orders.payments.transfer_pending",
+      "sale_orders.payments.reverse_posted",
+      "sale_orders.payments.correct_posted",
+      "sale_orders.payments.reenter_closed",
+      "payments.view_evidence",
+      "payments.attach_evidence",
+      "income.reconciliation.view",
+      "income.reconciliation.reconcile",
+      "income.reconciliation.unreconcile",
+      "income.audit.view",
+      "income.scope.manage",
+      "income.evidence.quarantine.manage",
+      "income.outbox.manage",
+    ];
+    const permissions = codes.map((code) => permission(code, code.startsWith("income.") ? "income" : "payments"));
+    const groups = buildUserPermissionGroups({ permissions, effectivePermissions: [], overrides: [] });
+
+    expect(getPermissionGroupModule(permissions[5])).toBe("income");
+    expect(getPermissionGroupModule(permissions[15])).toBe("income");
+    expect(groups).toHaveLength(1);
+    expect(groups[0].module).toBe("income");
+    expect(groups[0].label).toBe("Ingresos");
+    expect(groups[0].totalCount).toBe(24);
+    expect(groups[0].permissions.find((item) => item.code === "payments.view_evidence")?.label)
+      .toBe("Ver comprobantes de ingresos");
   });
 
   it("detects inherited, granted and denied user permission states", () => {
