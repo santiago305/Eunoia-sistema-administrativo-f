@@ -309,6 +309,7 @@ export type UnifiedSaleOrderPaymentInput = {
 
 export type SaveSaleOrderWithClientDto = {
   client: SaleOrderClientCommand;
+  companyId?: string;
   workflowId?: string;
   warehouseId?: string;
   agencyDetail?: string;
@@ -507,6 +508,7 @@ export type SaleOrderPayment = {
 
 export type SaleOrder = {
   id: string;
+  companyId?: string;
   currency?: string;
   serie: string | null;
   correlative: number | null;

@@ -615,7 +615,7 @@ export function SaleOrderEditor({
   const persist = useCallback(async () => {
     setSaving(true);
     try {
-      const payload = toSaveSaleOrderWithClientDto(form);
+      const payload = toSaveSaleOrderWithClientDto(form, companyId || undefined);
       const paymentPhotos = new Map<string, File>();
       for (const payment of form.payments) {
         if (payment.photo) {
@@ -668,7 +668,7 @@ export function SaleOrderEditor({
     } finally {
       setSaving(false);
     }
-  }, [form, mode, onDirtyChange, onSaved, order?.id]);
+  }, [companyId, form, mode, onDirtyChange, onSaved, order?.id]);
 
   const save = useCallback(async () => {
     if (validationMessage) {

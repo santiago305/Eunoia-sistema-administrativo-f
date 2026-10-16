@@ -338,6 +338,7 @@ export function markAttachmentRemoved(
 
 export function toSaveSaleOrderWithClientDto(
   form: SaleOrderEditorForm,
+  companyId?: string | null,
 ): SaveSaleOrderWithClientDto {
   const totals = calculateSaleOrderTotals(
     form.items,
@@ -390,6 +391,7 @@ export function toSaveSaleOrderWithClientDto(
         : { mode: "create" as const, data: clientData };
 
   return {
+    ...(companyId ? { companyId } : {}),
     client,
     workflowId: form.workflowId || undefined,
     warehouseId: form.warehouseId || undefined,
