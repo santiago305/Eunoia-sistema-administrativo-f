@@ -13,6 +13,7 @@ export type SaleOrderPaymentSelectOption = {
   value: string;
   label: string;
   paymentMethodCode?: string;
+  requiresOperationNumber?: boolean;
   accountType?: CompanyPaymentAccountType;
 };
 
@@ -44,16 +45,18 @@ export const buildSaleOrderPaymentMethodOptions = (
     value: method.methodId,
     label: method.name,
     paymentMethodCode: method.code,
+    requiresOperationNumber:
+      method.requiresOperationNumber ?? method.requiresOperationReference ?? true,
   }));
 
   if (fromApi.length > 0) return fromApi;
 
   return [
-    { value: PaymentTypes.EFECTIVO, label: "Efectivo", paymentMethodCode: "CASH" },
-    { value: PaymentTypes.TRANSFERENCIA, label: "Trans. bancaria", paymentMethodCode: "BANK_TRANSFER" },
-    { value: PaymentTypes.TARJETA, label: "Tarjeta", paymentMethodCode: "CARD" },
-    { value: PaymentTypes.DEPOSITO, label: "Depósito bancario", paymentMethodCode: "BANK_DEPOSIT" },
-    { value: PaymentTypes.PLIN, label: "Billetera digital", paymentMethodCode: "DIGITAL_WALLET" },
+    { value: PaymentTypes.EFECTIVO, label: "Efectivo", paymentMethodCode: "CASH", requiresOperationNumber: true },
+    { value: PaymentTypes.TRANSFERENCIA, label: "Trans. bancaria", paymentMethodCode: "BANK_TRANSFER", requiresOperationNumber: true },
+    { value: PaymentTypes.TARJETA, label: "Tarjeta", paymentMethodCode: "CARD", requiresOperationNumber: true },
+    { value: PaymentTypes.DEPOSITO, label: "Depósito bancario", paymentMethodCode: "BANK_DEPOSIT", requiresOperationNumber: true },
+    { value: PaymentTypes.PLIN, label: "Billetera digital", paymentMethodCode: "DIGITAL_WALLET", requiresOperationNumber: true },
   ];
 };
 

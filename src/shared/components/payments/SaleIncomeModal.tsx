@@ -42,7 +42,7 @@ export type SaleIncomeModalValues = {
   financialReason?: string | null;
 };
 
-export type SaleIncomeSelectOption = { value: string; label: string; paymentMethodCode?: string; accountType?: CompanyPaymentAccountType };
+export type SaleIncomeSelectOption = { value: string; label: string; paymentMethodCode?: string; requiresOperationNumber?: boolean; accountType?: CompanyPaymentAccountType };
 
 type Props = {
   open: boolean;
@@ -150,6 +150,10 @@ export function SaleIncomeModal({
       showFeedback(errorResponse("Completa monto, fecha, método y cuenta receptora."));
       return;
     }
+    if (method?.requiresOperationNumber && !draft.operationNumber.trim()) {
+      showFeedback(errorResponse("Ingresa el número de operación."));
+      return;
+    }
     if (requiresReasonModes.has(mode) && draft.reason.trim().length < 5) {
       showFeedback(errorResponse("Ingresa un motivo de al menos 5 caracteres."));
       return;
@@ -189,7 +193,7 @@ export function SaleIncomeModal({
           {fieldsAreReadOnly
             ? <FloatingInput label="Cuenta receptora" name={field("account")} value={account?.label ?? "—"} readOnly disabled={saving} />
             : <FloatingSelect label="Cuenta receptora" name="sale-income-account" value={draft.companyPaymentAccountId} options={compatibleAccounts} requiredIndicator searchable disabled={saving} onChange={(companyPaymentAccountId) => set({ companyPaymentAccountId })} />}
-          <FloatingInput label={operationLabel} name={field("operation")} value={draft.operationNumber ?? ""} readOnly={fieldsAreReadOnly} disabled={saving} onChange={(event) => set({ operationNumber: event.target.value })} />
+          <FloatingInput label={operationLabel} name={field("operation")} value={draft.operationNumber ?? ""} requiredIndicator={!fieldsAreReadOnly && Boolean(method?.requiresOperationNumber)} readOnly={fieldsAreReadOnly} disabled={saving} onChange={(event) => set({ operationNumber: event.target.value })} />
           <FloatingInput label="Descripción" name="sale-income-note" value={draft.note ?? ""} readOnly={fieldsAreReadOnly} disabled={saving} onChange={(event) => set({ note: event.target.value })} />
           {requiresReasonModes.has(mode) ? <label className="grid gap-1 text-sm sm:col-span-2"><span className="font-medium">{reasonLabel} <span aria-hidden="true">*</span></span><textarea aria-label={reasonLabel} className="min-h-20 rounded-md border border-border bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60" maxLength={500} value={draft.reason} disabled={saving || financialFieldsReadOnly} onChange={(event) => set({ reason: event.target.value })} /><span className="text-xs text-muted-foreground">El motivo quedará en el historial financiero.</span></label> : null}
           {readOnly ? <dl className="grid gap-x-4 gap-y-2 rounded-md border border-border bg-muted/20 p-3 text-sm sm:col-span-2 sm:grid-cols-2">

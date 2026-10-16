@@ -65,8 +65,9 @@ export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMe
 
   const openCreatePayment = () => {
     const total = calculateSaleOrderTotals(form.items, form.deliveryCost, form.discount, form.discountType).total;
-    const paid = form.payments.reduce((sum, payment) => ["CANCELLED", "REVERSED"].includes(payment.status ?? "") ? sum : sum + Number(payment.amount || 0), 0);
-    setModalState({ mode: "create", index: null, draft: { clientKey: nextClientKey(), method: "", paymentMethodId: null, companyPaymentAccountId: null, amount: Math.max(0, Number((total - paid).toFixed(2))), date: toLocalDateKey(new Date()), photo: null } });
+    const activePayments = form.payments.filter((payment) => !["CANCELLED", "REVERSED"].includes(payment.status ?? ""));
+    const paid = activePayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    setModalState({ mode: "create", index: null, draft: { clientKey: nextClientKey(), method: "", paymentMethodId: null, companyPaymentAccountId: null, amount: Math.max(0, Number((total - paid).toFixed(2))), date: toLocalDateKey(new Date()), note: activePayments.length > 0 ? "Saldo" : "", photo: null } });
   };
 
   const openEditPayment = (payment: SaleOrderEditorPayment, index: number) => {
@@ -97,6 +98,10 @@ export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMe
       return;
     }
     const selectedMethod = methodOptions.find((option) => option.value === values.paymentMethodId);
+    if (selectedMethod?.requiresOperationNumber && !values.operationNumber.trim()) {
+      sileo.error({ title: "Ingresa el número de operación para este método de pago." });
+      return;
+    }
     const nextDraft: SaleOrderEditorPayment = {
       ...modalState.draft,
       paymentMethodId: values.paymentMethodId,

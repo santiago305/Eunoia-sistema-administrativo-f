@@ -22,6 +22,7 @@ export const createCompanyMethodSchema = z.object({
   isDefault: z.boolean().optional(),
   requiresVoucher: z.boolean().optional(),
   evidencePolicy: z.enum(["INHERIT", "REQUIRED", "OPTIONAL"]).optional(),
+  requiresOperationNumber: z.boolean().optional(),
   enabled: z.boolean().optional(),
 });
 

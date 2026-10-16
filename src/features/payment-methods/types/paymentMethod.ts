@@ -24,6 +24,7 @@ export type PaymentMethod = {
   requiresSourceAccount?: boolean;
   requiresDestination?: boolean;
   requiresOperationReference?: boolean;
+  requiresOperationNumber?: boolean;
   isSystem?: boolean;
   isActive: boolean;
   requiresVoucher?: boolean;
@@ -40,6 +41,7 @@ export type PaymentMethodPivot = {
   requiresSourceAccount?: boolean;
   requiresDestination?: boolean;
   requiresOperationReference?: boolean;
+  requiresOperationNumber?: boolean;
   isActive: boolean;
   isDefault?: boolean;
   requiresVoucher?: boolean;
@@ -69,6 +71,7 @@ export type CompanyMethod = {
   methodId: string;
   requiresVoucher?: boolean;
   evidencePolicy?: CompanyMethodEvidencePolicy;
+  requiresOperationNumber?: boolean;
   enabled?: boolean;
   isDefault?: boolean;
 };
@@ -77,5 +80,6 @@ export type UpdateCompanyMethodDto = {
   isDefault?: boolean;
   enabled?: boolean;
   evidencePolicy?: CompanyMethodEvidencePolicy;
+  requiresOperationNumber?: boolean;
 };
 

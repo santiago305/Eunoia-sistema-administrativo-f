@@ -1,6 +1,10 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { filterSaleOrderBankAccountOptions, useSaleOrderPaymentOptions } from "./useSaleOrderPaymentOptions";
+import {
+  buildSaleOrderPaymentMethodOptions,
+  filterSaleOrderBankAccountOptions,
+  useSaleOrderPaymentOptions,
+} from "./useSaleOrderPaymentOptions";
 
 const {
   getPaymentMethodsByCompanyMock,
@@ -66,5 +70,22 @@ describe("useSaleOrderPaymentOptions", () => {
     expect(filterSaleOrderBankAccountOptions(accounts, "BANK_TRANSFER").map((item) => item.value)).toEqual(["bank"]);
     expect(filterSaleOrderBankAccountOptions(accounts, "BANK_DEPOSIT").map((item) => item.value)).toEqual(["bank", "cash"]);
     expect(filterSaleOrderBankAccountOptions(accounts, "DIGITAL_WALLET").map((item) => item.value)).toEqual(["wallet"]);
+  });
+
+  it("carries the company operation-number requirement into order payment options", () => {
+    expect(buildSaleOrderPaymentMethodOptions([
+      {
+        companyMethodId: "company-method-1",
+        methodId: "method-1",
+        name: "Courier",
+        isActive: true,
+        requiresOperationNumber: false,
+      },
+    ])).toEqual([
+      expect.objectContaining({
+        value: "method-1",
+        requiresOperationNumber: false,
+      }),
+    ]);
   });
 });

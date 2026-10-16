@@ -264,6 +264,7 @@ describe("PaymentMethodListModal", () => {
     expect(table).toHaveTextContent("Tarjeta");
     expect(table).toHaveTextContent("Método de pago");
     expect(table).toHaveTextContent("Comprobante");
+    expect(table).toHaveTextContent("Número de operación");
     expect(table).not.toHaveTextContent("Código");
     expect(table).not.toHaveTextContent("Estado");
   });
@@ -289,6 +290,34 @@ describe("PaymentMethodListModal", () => {
         companyId: "company-1",
         methodId: "method-card",
         evidencePolicy: "REQUIRED",
+        requiresOperationNumber: true,
+        enabled: true,
+      });
+    });
+  });
+
+  it("permite vincular un método con número de operación opcional", async () => {
+    getPaymentMethodsByCompanyMock.mockResolvedValue([]);
+
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Seleccionar método disponible" }));
+    fireEvent.click(screen.getByRole("button", { name: /número de operación/i }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "Opcional" }));
+    fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
+
+    await waitFor(() => {
+      expect(createCompanyMethodMock).toHaveBeenCalledWith({
+        companyId: "company-1",
+        methodId: "method-card",
+        evidencePolicy: "INHERIT",
+        requiresOperationNumber: false,
         enabled: true,
       });
     });
@@ -384,11 +413,15 @@ describe("PaymentMethodListModal", () => {
     expect(form.tagName).toBe("FORM");
     expect(form).toHaveClass(
       "grid-cols-1",
-      "lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.65fr)_auto]",
+      "md:grid-cols-2",
+      "xl:grid-cols-[minmax(0,1fr)_minmax(190px,0.7fr)_minmax(190px,0.7fr)_auto]",
     );
     expect(screen.getAllByText("Método de pago")).toHaveLength(2);
     expect(
       screen.getByRole("button", { name: /política de comprobante/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /número de operación/i }),
     ).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "Nuevo método" }),

@@ -90,6 +90,37 @@ describe("SaleIncomeModal", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("requires an operation number only when the selected company method requires it", () => {
+    const requiredSubmit = vi.fn();
+    const requiredMethod = [{
+      ...methodOptions[0],
+      requiresOperationNumber: true,
+    }];
+    const { unmount } = renderModal("edit-pending", {
+      values: { ...values, operationNumber: "" },
+      methodOptions: requiredMethod,
+      onSubmit: requiredSubmit,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    expect(requiredSubmit).not.toHaveBeenCalled();
+    expect(showFeedback).toHaveBeenCalled();
+    unmount();
+
+    const optionalSubmit = vi.fn();
+    renderModal("edit-pending", {
+      values: { ...values, operationNumber: "" },
+      methodOptions: [{ ...methodOptions[0], requiresOperationNumber: false }],
+      onSubmit: optionalSubmit,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(optionalSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ operationNumber: "" }),
+      null,
+    );
+  });
+
   it("submits a replacement evidence file with the normalized amount", async () => {
     const onSubmit = vi.fn();
     const createObjectURL = vi.fn(() => "blob:replacement-preview");

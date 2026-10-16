@@ -202,6 +202,7 @@ describe("SaleOrderPaymentCards", () => {
       screen.getByRole("dialog", { name: "Agregar pago" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Monto")).toHaveValue(74.5);
+    expect(screen.getByLabelText("Descripción")).toHaveValue("Saldo");
   });
 
   it("warns when required payment fields are missing", async () => {

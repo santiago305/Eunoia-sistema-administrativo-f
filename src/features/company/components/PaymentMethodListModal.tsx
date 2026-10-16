@@ -5,7 +5,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { CreditCard, LockKeyhole, Plus, ReceiptText, Star, Trash2 } from "lucide-react";
+import { CreditCard, Hash, LockKeyhole, Plus, ReceiptText, Star, Trash2 } from "lucide-react";
 import { Modal } from "@/shared/components/settings/modal";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
@@ -56,6 +56,7 @@ export function PaymentMethodListModal({
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [evidencePolicy, setEvidencePolicy] = useState<CompanyMethodEvidencePolicy>("INHERIT");
+  const [requiresOperationNumber, setRequiresOperationNumber] = useState(true);
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
   const [pendingRemoveMethod, setPendingRemoveMethod] =
@@ -132,6 +133,7 @@ export function PaymentMethodListModal({
     }
 
     setEvidencePolicy("INHERIT");
+    setRequiresOperationNumber(true);
   }, [availableOptions, selectedId]);
 
   const addMethod = useCallback(async () => {
@@ -144,11 +146,13 @@ export function PaymentMethodListModal({
         companyId,
         methodId: selectedId,
         evidencePolicy,
+        requiresOperationNumber,
         enabled: true,
       });
       showFeedback(successResponse("Método agregado."));
       setSelectedId("");
       setEvidencePolicy("INHERIT");
+      setRequiresOperationNumber(true);
       await loadCompanyMethods({ silent: true });
     } catch {
       showFeedback(errorResponse("No se pudo agregar el método."));
@@ -162,6 +166,7 @@ export function PaymentMethodListModal({
     companyId,
     loadCompanyMethods,
     evidencePolicy,
+    requiresOperationNumber,
     selectedId,
     showFeedback,
   ]);
@@ -288,6 +293,22 @@ export function PaymentMethodListModal({
             </span>
           ),
       },
+      {
+        id: "requiresOperationNumber",
+        header: "Número de operación",
+        sortAccessor: "requiresOperationNumber",
+        cell: (row) =>
+          row.requiresOperationNumber ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+              <Hash className="h-3.5 w-3.5" aria-hidden="true" />
+              Obligatorio
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Opcional
+            </span>
+          ),
+      },
       ...(canManagePaymentMethods
         ? [
             {
@@ -337,13 +358,13 @@ export function PaymentMethodListModal({
     <Modal
       onClose={close}
       title={title}
-      className={["w-full max-w-3xl", className].filter(Boolean).join(" ")}
+      className={["w-full max-w-5xl", className].filter(Boolean).join(" ")}
     >
       <div className="space-y-5">
         <section>
           <form
             data-testid="company-payment-method-form"
-            className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.65fr)_auto] lg:items-start"
+            className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(190px,0.7fr)_minmax(190px,0.7fr)_auto] xl:items-start"
             onSubmit={handleSubmit}
           >
             <PaymentMethodSelectComposed
@@ -379,9 +400,22 @@ export function PaymentMethodListModal({
               searchable={false}
             />
 
+            <FloatingSelect
+              label="Número de operación"
+              name="company-method-operation-number"
+              value={requiresOperationNumber ? "REQUIRED" : "OPTIONAL"}
+              onChange={(value) => setRequiresOperationNumber(value === "REQUIRED")}
+              options={[
+                { value: "REQUIRED", label: "Obligatorio" },
+                { value: "OPTIONAL", label: "Opcional" },
+              ]}
+              disabled={adding || !canManagePaymentMethods}
+              searchable={false}
+            />
+
             <SystemButton
               type="submit"
-              className="h-10 w-full lg:w-auto"
+              className="h-10 w-full md:col-span-2 xl:col-span-1 xl:w-auto"
               leftIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
               disabled={!selectedId || adding || !canManagePaymentMethods}
               loading={adding}
