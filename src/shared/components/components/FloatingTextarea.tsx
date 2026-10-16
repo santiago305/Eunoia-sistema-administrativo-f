@@ -15,7 +15,7 @@ type FloatingTextareaProps = {
   onChange?: (event: ChangeEvent<HTMLTextAreaElement>) => void;
 } & Omit<
   TextareaHTMLAttributes<HTMLTextAreaElement>,
-  "name" | "value" | "onChange" | "placeholder" | "rows"
+  "name" | "value" | "onChange" | "rows"
 >;
 
 export const FloatingTextarea = forwardRef<

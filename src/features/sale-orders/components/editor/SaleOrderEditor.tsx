@@ -994,6 +994,7 @@ export function SaleOrderEditor({
                   persistedClientId={mode === "edit" ? order?.client?.id : undefined}
                   currency={order?.currency ?? "PEN"}
                   remainingAmount={order?.pendingAmount ?? 0}
+                  customerCreditAvailable={order?.customerCreditAvailable ?? 0}
                   hasUnsavedChanges={isDirty}
                   onCreditApplied={onOrderChanged}
                 />

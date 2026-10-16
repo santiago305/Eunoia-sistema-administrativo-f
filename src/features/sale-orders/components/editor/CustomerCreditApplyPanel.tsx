@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CheckCircle2, Coins, RefreshCw } from "lucide-react";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -12,6 +14,7 @@ type Props = {
   saleOrderId: string;
   currency: string;
   remainingAmount: number;
+  availableCredit?: number;
   hasUnsavedChanges: boolean;
   onApplied?: () => void | Promise<void>;
 };
@@ -30,7 +33,7 @@ const readCreditApplyRecovery = (userId: string | null | undefined, clientId: st
   } catch { return null; }
 };
 
-export function CustomerCreditApplyPanel({ clientId, saleOrderId, currency, remainingAmount, hasUnsavedChanges, onApplied }: Props) {
+export function CustomerCreditApplyPanel({ clientId, saleOrderId, currency, remainingAmount, availableCredit = 0, hasUnsavedChanges, onApplied }: Props) {
   const { can } = usePermissions();
   const { userId } = useAuth();
   const canView = can("customer_credits.view");
@@ -167,7 +170,7 @@ export function CustomerCreditApplyPanel({ clientId, saleOrderId, currency, rema
     } finally { setRecovering(false); }
   };
 
-  if (!canView || !canApply || !clientId || !saleOrderId) return null;
+  if (!canView || !canApply || !clientId || !saleOrderId || (!recovery && (!Number.isFinite(availableCredit) || availableCredit <= 0))) return null;
 
   return (
     <div className="mt-3 rounded-lg border border-border bg-background/70 p-3">
@@ -207,28 +210,33 @@ export function CustomerCreditApplyPanel({ clientId, saleOrderId, currency, rema
           {hasUnsavedChanges ? <p className="text-sm text-amber-800">Guarda o descarta los cambios del pedido antes de aplicar créditos.</p> : null}
 
           <form className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
-            <div className="space-y-1">
-              <label htmlFor={`credit-amount-${saleOrderId}`} className="text-sm font-medium">Monto a aplicar ({currency})</label>
-              <input
-                id={`credit-amount-${saleOrderId}`}
-                className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-base tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                type="number" inputMode="decimal" min="0.01" max={maxApply.toFixed(2)} step="0.01"
-                value={amount} onChange={(event) => { setAmount(event.target.value); setConfirmed(false); setSuccess(null); }}
+            <div>
+              <FloatingInput
+                label={`Monto a aplicar (${currency})`}
+                name={`credit-amount-${saleOrderId}`}
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                max={maxApply.toFixed(2)}
+                step="0.01"
+                value={amount}
+                onChange={(event) => { setAmount(event.target.value); setConfirmed(false); setSuccess(null); }}
                 disabled={loading || submitting || currencyBalance <= 0 || maxApply <= 0 || hasUnsavedChanges}
                 aria-describedby={`credit-limit-${saleOrderId}`}
               />
               <p id={`credit-limit-${saleOrderId}`} className="text-xs text-muted-foreground">Máximo aplicable: {formatted.format(maxApply)} (menor entre crédito disponible y saldo pendiente).</p>
             </div>
-            <div className="space-y-1">
-              <label htmlFor={`credit-reason-${saleOrderId}`} className="text-sm font-medium">Motivo</label>
-              <textarea
-                id={`credit-reason-${saleOrderId}`}
-                className="min-h-11 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={reason} onChange={(event) => { setReason(event.target.value); setConfirmed(false); setSuccess(null); }}
-                minLength={5} maxLength={500} required disabled={submitting || hasUnsavedChanges}
+            <FloatingTextarea
+              label="Motivo"
+              name={`credit-reason-${saleOrderId}`}
+              value={reason}
+              onChange={(event) => { setReason(event.target.value); setConfirmed(false); setSuccess(null); }}
+              minLength={5}
+              maxLength={500}
+              required
+              disabled={submitting || hasUnsavedChanges}
                 placeholder="Indica por qué se aplica el saldo"
-              />
-            </div>
+            />
             <label className="flex min-h-11 items-start gap-2 text-sm leading-5 sm:col-span-2">
               <input className="mt-1 h-4 w-4 accent-primary" type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} disabled={submitting || loading || hasUnsavedChanges || maxApply <= 0} />
               Confirmo aplicar {formatted.format(Number.isFinite(amountNumber) ? amountNumber : 0)} al saldo pendiente de este pedido.

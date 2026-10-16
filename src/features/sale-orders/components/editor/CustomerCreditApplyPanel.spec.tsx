@@ -24,10 +24,16 @@ const props = {
   saleOrderId: "order-1",
   currency: "PEN",
   remainingAmount: 50,
+  availableCredit: 30,
   hasUnsavedChanges: false,
 };
 
 describe("CustomerCreditApplyPanel", () => {
+  it("does not render the credit action when the order has no available credit", () => {
+    const { container } = render(<CustomerCreditApplyPanel {...props} availableCredit={0} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
   beforeEach(() => {
     getBalances.mockResolvedValue([{ currency: "PEN", available: 30 }, { currency: "USD", available: 90 }]);
     applyCredit.mockResolvedValue({ type: "success" });

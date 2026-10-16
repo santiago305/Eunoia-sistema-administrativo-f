@@ -21,6 +21,7 @@ type Props = {
   persistedClientId?: string;
   currency?: string;
   remainingAmount?: number;
+  customerCreditAvailable?: number;
   hasUnsavedChanges?: boolean;
   onCreditApplied?: () => void | Promise<void>;
 };
@@ -30,7 +31,7 @@ const nextClientKey = () => typeof crypto !== "undefined" && "randomUUID" in cry
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMethodOptions, bankAccountOptions: providedBankAccountOptions, saleOrderId, persistedClientId, currency = "PEN", remainingAmount = 0, hasUnsavedChanges = false, onCreditApplied }: Props) {
+export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMethodOptions, bankAccountOptions: providedBankAccountOptions, saleOrderId, persistedClientId, currency = "PEN", remainingAmount = 0, customerCreditAvailable = 0, hasUnsavedChanges = false, onCreditApplied }: Props) {
   const shouldLoadPaymentOptions = providedMethodOptions === undefined || providedBankAccountOptions === undefined;
   const fallbackOptions = useSaleOrderPaymentOptions({ enabled: shouldLoadPaymentOptions });
   const methodOptions = providedMethodOptions ?? fallbackOptions.methodOptions;
@@ -135,6 +136,7 @@ export function SaleOrderPaymentCards({ form, setForm, methodOptions: providedMe
       saleOrderId={saleOrderId}
       currency={currency}
       remainingAmount={remainingAmount}
+      availableCredit={customerCreditAvailable}
       hasUnsavedChanges={hasUnsavedChanges}
       onApplied={onCreditApplied}
     /> : null}
