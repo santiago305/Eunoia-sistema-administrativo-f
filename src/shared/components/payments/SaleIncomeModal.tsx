@@ -66,7 +66,6 @@ type Props = {
   maxAmount?: number;
   fieldSuffix?: string;
   skipRequiredValidation?: boolean;
-  compactEvidenceView?: boolean;
   extraContent?: ReactNode;
   errorMessage?: string | null;
   onClose: () => void;
@@ -91,7 +90,7 @@ const dateLabel = (value?: string | null) => value ? new Intl.DateTimeFormat("es
 export function SaleIncomeModal({
   open, mode, values, description, evidenceUrl = null, evidenceLoading = false, canViewEvidence,
   canUploadEvidence, methodOptions, bankAccountOptions, getCompatibleAccounts,
-  saving = false, submitDisabled = false, financialFieldsReadOnly = false, submitLabel, fieldPrefix = "sale-income", fieldSuffix = "", skipRequiredValidation = false, operationLabel = "Número de operación", reasonLabel = "Motivo", maxAmount, compactEvidenceView = false, extraContent, errorMessage, onClose, onSubmit,
+  saving = false, submitDisabled = false, financialFieldsReadOnly = false, submitLabel, fieldPrefix = "sale-income", fieldSuffix = "", skipRequiredValidation = false, operationLabel = "Número de operación", reasonLabel = "Motivo", maxAmount, extraContent, errorMessage, onClose, onSubmit,
 }: Props) {
   const { showFeedback } = useFeedbackToast();
   const [draft, setDraft] = useState<SaleIncomeModalValues | null>(values);
@@ -121,7 +120,6 @@ export function SaleIncomeModal({
   const account = bankAccountOptions.find((option) => option.value === draft?.companyPaymentAccountId);
   const compatibleAccounts = useMemo(() => getCompatibleAccounts(bankAccountOptions, method?.paymentMethodCode), [bankAccountOptions, getCompatibleAccounts, method?.paymentMethodCode]);
   const images = previewUrl ? [previewUrl] : evidenceUrl ? [evidenceUrl] : [];
-  const showFields = !(compactEvidenceView && readOnly && images.length > 0);
   const fieldsAreReadOnly = readOnly || financialFieldsReadOnly;
   const amountError = maxAmount !== undefined && Number(draft?.amount) > maxAmount + 0.01
     ? `El monto no puede superar el saldo disponible de ${new Intl.NumberFormat("es-PE", { style: "currency", currency: draft?.currency || "PEN", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(maxAmount)}.`
@@ -186,8 +184,8 @@ export function SaleIncomeModal({
       preventClose={saving}
       footer={<div className="flex justify-end gap-2"><SystemButton variant="ghost" onClick={onClose} disabled={saving}>Cerrar</SystemButton>{editable && onSubmit ? <SystemButton onClick={() => void submit()} loading={saving} disabled={saving || submitDisabled}>{submitLabel ?? (mode === "correct-posted" ? "Corregir ingreso" : mode === "reenter" ? "Crear ingreso por confirmar" : mode === "create" ? "Guardar pago" : "Guardar cambios")}</SystemButton> : null}</div>}
     >
-      {draft ? <div className={`grid gap-4 ${showFields ? "md:grid-cols-[minmax(0,1fr)_240px]" : ""}`}>
-        {showFields ? <div className="grid content-start gap-4 sm:grid-cols-2">
+      {draft ? <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="grid content-start gap-4 sm:grid-cols-2">
           <FloatingInput label="Monto" name={field("amount")} type="number" inputMode="decimal" min="0.01" step="0.01" value={typeof draft.amount === "number" ? draft.amount.toFixed(2) : draft.amount} requiredIndicator={!fieldsAreReadOnly} error={amountError} readOnly={fieldsAreReadOnly} disabled={saving} onChange={(event) => set({ amount: event.target.value })} onBlur={normalizeAmountOnBlur} />
           {fieldsAreReadOnly
             ? <FloatingInput label="Fecha de pago" name={field("date")} value={dateLabel(draft.date)} readOnly disabled={saving} />
@@ -212,7 +210,7 @@ export function SaleIncomeModal({
             {draft.financialReason || draft.voidReason ? <div className="sm:col-span-2"><dt className="text-xs text-muted-foreground">Motivo</dt><dd className="break-words font-medium">{draft.financialReason || draft.voidReason}</dd></div> : null}
           </dl> : null}
           {errorMessage ? <p className="text-sm text-destructive sm:col-span-2" role="alert">{errorMessage}</p> : null}
-        </div> : null}
+        </div>
         <div className="space-y-2">
           {evidenceLoading ? <div className="flex h-36 items-center justify-center rounded-md border border-border bg-muted/30 text-sm text-muted-foreground" role="status">Cargando evidencia…</div> : <OperationImageGallery images={images} altPrefix="Evidencia del pago" emptyMessage={canViewEvidence ? "Este pago no tiene evidencia." : "No tienes permiso para consultar la evidencia."} canUpload={editable && canUploadEvidence} onUpload={handleFile} />}
           {file ? <div className="flex items-center justify-between gap-2"><p className="truncate text-xs text-foreground" title={file.name}>Nueva evidencia: {file.name}</p><button type="button" className="min-h-11 rounded-md px-2 text-xs font-medium text-muted-foreground underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" onClick={() => setFile(null)} disabled={saving}>Cancelar cambio</button></div> : null}

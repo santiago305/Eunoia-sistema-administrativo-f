@@ -285,6 +285,6 @@ export function IncomePaymentEvidenceModal({
       accountingDate: income.accountingDate, voidedAt: income.voidedAt, voidedByUserId: income.voidedByUserId, voidReason: income.voidReason,
     } : null}
     description={income ? `${income.saleOrderNumber} · ${income.clientName}` : undefined}
-    evidenceUrl={selectedRevisionUrl ?? evidenceUrl} evidenceLoading={loading} canViewEvidence={canViewEvidence} canUploadEvidence={false} compactEvidenceView
+    evidenceUrl={selectedRevisionUrl ?? evidenceUrl} evidenceLoading={loading} canViewEvidence={canViewEvidence} canUploadEvidence={false}
     methodOptions={methodOptions} bankAccountOptions={bankAccountOptions} getCompatibleAccounts={filterSaleOrderBankAccountOptions} extraContent={<>{revisionHistory}{quarantinePanel}</>} onClose={onClose} />;
 }

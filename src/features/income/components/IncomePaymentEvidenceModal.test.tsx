@@ -43,13 +43,13 @@ describe("IncomePaymentEvidenceModal", () => {
     recoverQuarantineMock.mockResolvedValue({ status: "COMPLETED" });
   });
 
-  it("previews existing evidence without repeating payment summary or offering upload", async () => {
+  it("previews existing evidence alongside the payment summary without offering upload", async () => {
     getEvidenceMock.mockResolvedValueOnce({ status: "AVAILABLE", available: true, attachmentId: "evidence-1", url: "/private", originalName: "proof.png", mimeType: "image/png", sizeBytes: 100, createdAt: "2026-10-01", canView: true, canUpload: false });
     render(<IncomePaymentEvidenceModal open income={income} canViewEvidence onClose={vi.fn()} />);
 
     expect(await screen.findByRole("button", { name: "Ver imagen grande" })).toBeInTheDocument();
     expect(getEvidenceContentMock).toHaveBeenCalledWith("income-1");
-    expect(screen.queryByText("Monto")).not.toBeInTheDocument();
+    expect(screen.getByText("Monto")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /subir evidencia|cambiar imagen/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ver imagen grande" }));
     expect(await screen.findByRole("link", { name: "Descargar imagen" })).toBeInTheDocument();
