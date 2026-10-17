@@ -1,4 +1,4 @@
-import type { ChangeEventHandler, ReactNode } from "react";
+import type { ChangeEventHandler, FocusEventHandler, ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SaleIncomeModal, type SaleIncomeModalMode, type SaleIncomeModalValues, type SaleIncomeSelectOption } from "./SaleIncomeModal";
@@ -11,7 +11,7 @@ vi.mock("@/shared/components/modales/Modal", () => ({
 }));
 vi.mock("@/shared/hooks/useFeedbackToast", () => ({ useFeedbackToast: () => ({ showFeedback }) }));
 vi.mock("@/shared/components/components/FloatingInput", () => ({
-  FloatingInput: ({ label, name, value, disabled, readOnly, onChange, type = "text" }: { label: string; name?: string; value?: string | number; disabled?: boolean; readOnly?: boolean; onChange?: ChangeEventHandler<HTMLInputElement>; type?: string }) => <label>{label}<input aria-label={label} name={name} type={type} value={value ?? ""} disabled={disabled} readOnly={readOnly} onChange={onChange} /></label>,
+  FloatingInput: ({ label, name, value, disabled, readOnly, onChange, onBlur, type = "text" }: { label: string; name?: string; value?: string | number; disabled?: boolean; readOnly?: boolean; onChange?: ChangeEventHandler<HTMLInputElement>; onBlur?: FocusEventHandler<HTMLInputElement>; type?: string }) => <label>{label}<input aria-label={label} name={name} type={type} value={value ?? ""} disabled={disabled} readOnly={readOnly} onChange={onChange} onBlur={onBlur} /></label>,
 }));
 vi.mock("@/shared/components/components/date-picker/FloatingDatePicker", () => ({
   FloatingDatePicker: ({ label, name, disabled, onChange }: { label: string; name?: string; disabled?: boolean; onChange: (date: Date | null) => void }) => <label>{label}<input aria-label={label} name={name} type="date" disabled={disabled} onChange={(event) => onChange(event.target.value ? new Date(`${event.target.value}T00:00:00`) : null)} /></label>,
@@ -52,6 +52,17 @@ describe("SaleIncomeModal", () => {
       expect(screen.getByLabelText("Monto")).toHaveValue(125.5);
       expect(screen.getByLabelText("Monto")).toHaveAttribute("value", "125.50");
     });
+
+  it("allows editing decimal amounts and formats them only when leaving the field", () => {
+    renderModal("edit-pending", { onSubmit: vi.fn() });
+    const amountInput = screen.getByLabelText("Monto");
+
+    fireEvent.change(amountInput, { target: { value: "109.9" } });
+    expect(amountInput).toHaveAttribute("value", "109.9");
+
+    fireEvent.blur(amountInput);
+    expect(amountInput).toHaveAttribute("value", "109.90");
+  });
 
   it.each(["view-posted", "view-cancelled", "view-reversed", "view-unknown"] as const) ("keeps %s strictly read-only", (mode) => {
       renderModal(mode);

@@ -128,6 +128,15 @@ export function SaleIncomeModal({
     : undefined;
   const field = (name: string) => `${fieldPrefix}-${name}${fieldSuffix ? `-${fieldSuffix}` : ""}`;
   const set = (patch: Partial<SaleIncomeModalValues>) => setDraft((current) => current ? { ...current, ...patch } : current);
+  const normalizeAmountOnBlur = () => {
+    setDraft((current) => {
+      if (!current) return current;
+      const rawAmount = String(current.amount ?? "").trim();
+      if (!rawAmount) return { ...current, amount: "" };
+      const amount = Number(rawAmount);
+      return Number.isFinite(amount) ? { ...current, amount: amount.toFixed(2) } : current;
+    });
+  };
 
   const handleFile = (candidate?: File | null) => {
     setFileError(null);
@@ -179,7 +188,7 @@ export function SaleIncomeModal({
     >
       {draft ? <div className={`grid gap-4 ${showFields ? "md:grid-cols-[minmax(0,1fr)_240px]" : ""}`}>
         {showFields ? <div className="grid content-start gap-4 sm:grid-cols-2">
-          <FloatingInput label="Monto" name={field("amount")} type="number" inputMode="decimal" min="0.01" step="0.01" value={draft.amount === "" ? "" : Number(draft.amount).toFixed(2)} requiredIndicator={!fieldsAreReadOnly} error={amountError} readOnly={fieldsAreReadOnly} disabled={saving} onChange={(event) => set({ amount: event.target.value })} />
+          <FloatingInput label="Monto" name={field("amount")} type="number" inputMode="decimal" min="0.01" step="0.01" value={typeof draft.amount === "number" ? draft.amount.toFixed(2) : draft.amount} requiredIndicator={!fieldsAreReadOnly} error={amountError} readOnly={fieldsAreReadOnly} disabled={saving} onChange={(event) => set({ amount: event.target.value })} onBlur={normalizeAmountOnBlur} />
           {fieldsAreReadOnly
             ? <FloatingInput label="Fecha de pago" name={field("date")} value={dateLabel(draft.date)} readOnly disabled={saving} />
             : <FloatingDatePicker label="Fecha de pago" name={field("date")} value={parseDateInputValue(draft.date)} requiredIndicator disabled={saving} onChange={(value) => set({ date: value ? toLocalDateKey(value) : "" })} />}
